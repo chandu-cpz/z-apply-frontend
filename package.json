@@ -1,0 +1,44 @@
+{
+  "name": "z-apply-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc -b && vite build",
+    "test": "vitest run",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.4.0",
+    "@novnc/novnc": "^1.7.0",
+    "@tanstack/react-query": "^5.90.21",
+    "@tanstack/react-virtual": "^3.14.6",
+    "framer-motion": "^12.42.2",
+    "lucide-react": "^0.563.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "react-hook-form": "^7.81.0",
+    "react-markdown": "^10.1.0",
+    "react-resizable-panels": "^4.3.1",
+    "shiki": "^4.3.1",
+    "sonner": "^2.0.7",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@tailwindcss/vite": "^4.3.2",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "tailwindcss": "^4.3.2",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.4",
+    "vite": "^7.3.1",
+    "vitest": "^4.0.16"
+  }
+}
