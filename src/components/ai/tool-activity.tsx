@@ -3,10 +3,11 @@ import { useState } from "react";
 import type { ActivityEvent } from "../../types";
 
 /** Operational tool evidence. Core has already removed secrets and runtime objects. */
-export function ToolActivity({ event }: { event: ActivityEvent }) {
+export function ToolActivity({ event, defaultExpanded = false }: { event: ActivityEvent; defaultExpanded?: boolean }) {
   const name = text(event.payload.tool_name) || "tool";
   const state = event.type.split(".").at(-1) ?? "activity";
-  const [expanded, setExpanded] = useState(state === "failed" || state === "denied");
+  const [expanded, setExpanded] = useState(defaultExpanded || state === "failed" || state === "denied");
+  const [payloadExpanded, setPayloadExpanded] = useState(defaultExpanded);
   if (!event.type.startsWith("tool.")) return null;
   const input = record(event.payload.input);
   const facts = toolFacts(name, input, event.payload);
@@ -39,15 +40,15 @@ export function ToolActivity({ event }: { event: ActivityEvent }) {
         </dl>
       )}
 
-      <details className="group border-t border-stone-100 dark:border-zinc-800">
-        <summary className="flex cursor-pointer list-none items-center gap-1.5 px-3 py-2 text-[9px] uppercase tracking-[.08em] text-stone-400 hover:text-violet-600 dark:text-zinc-600 dark:hover:text-violet-300">
-          <ChevronRight size={11} className="transition-transform group-open:rotate-90" />
+      <div className="border-t border-stone-100 dark:border-zinc-800">
+        <button className="flex w-full items-center gap-1.5 px-3 py-2 text-left text-[9px] uppercase tracking-[.08em] text-stone-400 hover:text-violet-600 dark:text-zinc-600 dark:hover:text-violet-300" type="button" aria-expanded={payloadExpanded} onClick={() => setPayloadExpanded((value) => !value)}>
+          <ChevronRight size={11} className={`transition-transform ${payloadExpanded ? "rotate-90" : ""}`} />
           Normalized payload
-        </summary>
-        <pre className="max-h-64 overflow-auto border-t border-stone-100 bg-stone-50 p-3 text-[9px] leading-relaxed whitespace-pre-wrap break-all text-stone-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+        </button>
+        {payloadExpanded && <pre className="max-h-64 overflow-auto border-t border-stone-100 bg-stone-50 p-3 text-[9px] leading-relaxed whitespace-pre-wrap break-all text-stone-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
           {JSON.stringify(event.payload, null, 2)}
-        </pre>
-      </details>
+        </pre>}
+      </div>
       </>}
     </div>
   );
