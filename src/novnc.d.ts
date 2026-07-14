@@ -4,5 +4,7 @@ declare module "@novnc/novnc" {
     viewOnly: boolean;
     scaleViewport: boolean;
     disconnect(): void;
+    addEventListener(type: "connect" | "disconnect" | "securityfailure" | "credentialsrequired", listener: (event: Event) => void): void;
+    removeEventListener(type: "connect" | "disconnect" | "securityfailure" | "credentialsrequired", listener: (event: Event) => void): void;
   }
 }
