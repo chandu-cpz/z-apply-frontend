@@ -6,7 +6,7 @@ import {
   useDefaultLayout,
   usePanelRef,
 } from "react-resizable-panels";
-import { Command, History, Moon, PanelLeftClose, PanelRightClose, Settings, Sun } from "lucide-react";
+import { Command, Moon, PanelLeftClose, PanelRightClose, Sun } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { api } from "./api";
@@ -61,7 +61,9 @@ export function App() {
           onSelect={(nextRun) => {
             setSelectedId(nextRun.id);
             setIsCreatingRun(false);
-            void api.focus(nextRun.id).catch(() => undefined);
+            if (nextRun.status !== "terminal") {
+              void api.focus(nextRun.id).catch((error: Error) => toast.error("Browser focus unavailable", { description: error.message }));
+            }
           }}
         />
       )}
@@ -83,8 +85,6 @@ function Header({ active }: { active?: Run }) {
         <b className="ml-2 text-stone-700 dark:text-zinc-300">{active?.current_model || "ROUTER READY"}</b>
       </div>
       <nav className="hidden gap-1 sm:flex">
-        <button className="flex items-center gap-1.5 px-2.5 py-2 text-xs text-stone-500 transition hover:text-stone-950 dark:text-zinc-500 dark:hover:text-white"><History size={16} /> History</button>
-        <button className="flex items-center gap-1.5 px-2.5 py-2 text-xs text-stone-500 transition hover:text-stone-950 dark:text-zinc-500 dark:hover:text-white"><Settings size={16} /> Diagnostics</button>
         <button className="grid size-8 place-items-center rounded-md text-stone-500 hover:bg-stone-100 hover:text-stone-950 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white" onClick={toggleTheme} title="Toggle color theme">{theme === "light" ? <Moon size={15} /> : <Sun size={15} />}</button>
       </nav>
     </header>
@@ -102,7 +102,7 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
   const query = useQueryClient();
   const leftPanel = usePanelRef();
   const rightPanel = usePanelRef();
-  const layout = useDefaultLayout({ id: "z-apply-workspace-v2", storage: localStorage });
+  const layout = useDefaultLayout({ id: "z-apply-workspace-v3", storage: localStorage });
   const events = useQuery({
     queryKey: ["events", run.id],
     queryFn: () => api.events(run.id),
@@ -133,15 +133,15 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
   const pending = human.data?.find((item) => item.status === "pending");
 
   return (
-    <main>
+    <main className="h-[calc(100dvh_-_3.75rem)] min-h-0">
       <Group
         orientation="horizontal"
-        className="min-h-[calc(100vh-3.75rem)] overflow-hidden bg-stone-100"
+        className="h-full overflow-hidden bg-stone-100 dark:bg-zinc-950"
         defaultLayout={layout.defaultLayout}
         onLayoutChanged={layout.onLayoutChanged}
       >
-        <Panel id="context" panelRef={leftPanel} defaultSize={20} minSize={18} collapsible collapsedSize={0}>
-          <div className="flex h-full min-w-[250px] flex-col">
+        <Panel id="context" panelRef={leftPanel} defaultSize={18} minSize={16} collapsible collapsedSize={0}>
+          <div className="flex h-full min-w-0 flex-col">
             <RunRail
               runs={runs}
               selected={run.id}
@@ -153,7 +153,7 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
           </div>
         </Panel>
         <Separator className="group relative w-3 cursor-col-resize bg-stone-200 after:absolute after:inset-x-1 after:top-[40%] after:bottom-[40%] after:rounded after:bg-stone-400 hover:after:bg-violet-500" />
-        <Panel id="conversation" defaultSize={51} minSize={36}>
+        <Panel id="conversation" defaultSize={55} minSize={40}>
           <AgentConversation
             run={run}
             events={events.data ?? []}
@@ -162,8 +162,8 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
           />
         </Panel>
         <Separator className="group relative w-3 cursor-col-resize bg-stone-200 after:absolute after:inset-x-1 after:top-[40%] after:bottom-[40%] after:rounded after:bg-stone-400 hover:after:bg-violet-500" />
-        <Panel id="workspace" panelRef={rightPanel} defaultSize={29} minSize={24} collapsible collapsedSize={0}>
-          <aside className="flex h-full min-w-[280px] flex-col gap-3 bg-stone-100 p-3 dark:bg-zinc-950">
+        <Panel id="workspace" panelRef={rightPanel} defaultSize={27} minSize={24} collapsible collapsedSize={0}>
+          <aside className="flex h-full min-w-0 flex-col gap-2 bg-stone-100 p-2 dark:bg-zinc-950">
             <BrowserPanel
               run={run}
               live={live.data}

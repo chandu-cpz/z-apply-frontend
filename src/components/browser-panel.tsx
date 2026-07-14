@@ -1,4 +1,4 @@
-import { Eye, Focus, LockKeyhole, MonitorUp, MousePointer2, RefreshCw, ShieldCheck } from "lucide-react";
+import { Eye, Focus, LockKeyhole, MonitorUp, MousePointer2, ShieldCheck } from "lucide-react";
 import type { LiveView, Run } from "../types";
 import { GlowFrame } from "./cult/glow-frame";
 import { NoVncCanvas } from "./no-vnc-canvas";
@@ -7,16 +7,17 @@ interface Props { run: Run; live?: LiveView; onFocus(): void; onControl(): void;
 
 export function BrowserPanel({ run, live, onFocus, onControl, onReturn }: Props) {
   const human = live?.control_mode === "human_control";
+  const canControl = run.status !== "terminal" && Boolean(live?.available);
   const title = live?.available ? "Browser connected" : "Browser workspace";
   return (
     <section className={`flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border bg-white dark:bg-zinc-900 ${human ? "border-amber-300" : "border-stone-200 dark:border-zinc-800"}`}>
       <header className="flex items-center justify-between border-b border-stone-200 px-4 py-3 dark:border-zinc-800">
         <div className="flex items-center gap-2"><span className="size-1.5 rounded-full bg-cyan-500" /><div><h2 className="text-sm font-semibold text-stone-900 dark:text-zinc-100">{title}</h2><p className="mt-0.5 font-mono text-[10px] text-stone-400 dark:text-zinc-500">{human ? "You control this workspace" : "View-only while the agent works"}</p></div></div>
-        <div className="flex gap-1"><IconButton title="Focus active browser" onClick={onFocus}><Focus size={15} /></IconButton><IconButton title="Reconnect browser"><RefreshCw size={15} /></IconButton></div>
+        {canControl && <IconButton title="Focus active browser" onClick={onFocus}><Focus size={15} /></IconButton>}
       </header>
       {human && <div className="flex items-center gap-2 bg-amber-100 px-4 py-2 text-xs text-amber-900 dark:bg-amber-950/50 dark:text-amber-200"><MousePointer2 size={14} /> You have browser control. Agent actions are paused.</div>}
       <GlowFrame><div className={`grid h-full min-h-0 flex-1 place-items-center ${live?.websocket_url ? "bg-slate-950" : "bg-stone-50 dark:bg-zinc-950"}`}>{live?.websocket_url ? <NoVncCanvas websocketUrl={live.websocket_url} viewOnly={!human} /> : <BrowserEmpty run={run} human={human} />}</div></GlowFrame>
-      <footer className="flex items-center justify-between border-t border-stone-200 px-4 py-3 dark:border-zinc-800"><span className="text-xs text-stone-500 dark:text-zinc-500">{human ? "Interactive session" : "Protected session"}</span>{human ? <button className="rounded-md bg-violet-600 px-3 py-2 text-xs font-medium text-white hover:bg-violet-500" onClick={onReturn}>Return to agent</button> : <button className="flex items-center gap-1.5 rounded-md bg-violet-600 px-3 py-2 text-xs font-medium text-white hover:bg-violet-500" onClick={onControl}><MousePointer2 size={14} /> Take control</button>}</footer>
+      <footer className="flex items-center justify-between border-t border-stone-200 px-4 py-3 dark:border-zinc-800"><span className="text-xs text-stone-500 dark:text-zinc-500">{human ? "Interactive session" : canControl ? "Protected session" : "No active browser"}</span>{human ? <button className="rounded-md bg-violet-600 px-3 py-2 text-xs font-medium text-white hover:bg-violet-500" onClick={onReturn}>Return to agent</button> : canControl && <button className="flex items-center gap-1.5 rounded-md bg-violet-600 px-3 py-2 text-xs font-medium text-white hover:bg-violet-500" onClick={onControl}><MousePointer2 size={14} /> Take control</button>}</footer>
       {!human && <div className="flex items-center justify-center gap-1.5 border-t border-stone-200 bg-stone-50 py-2 font-mono text-[10px] text-stone-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-600"><LockKeyhole size={12} /> View-only until you take control</div>}
     </section>
   );
