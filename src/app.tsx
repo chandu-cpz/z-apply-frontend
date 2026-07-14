@@ -103,7 +103,7 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
   const query = useQueryClient();
   const leftPanel = usePanelRef();
   const rightPanel = usePanelRef();
-  const layout = useDefaultLayout({ id: "z-apply-three-pane", storage: localStorage });
+  const layout = useDefaultLayout({ id: "z-apply-workspace-v2", storage: localStorage });
   const events = useQuery({
     queryKey: ["events", run.id],
     queryFn: () => api.events(run.id),
@@ -140,14 +140,14 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
         defaultLayout={layout.defaultLayout}
         onLayoutChanged={layout.onLayoutChanged}
       >
-        <Panel id="context" panelRef={leftPanel} defaultSize={23} minSize={18} collapsible collapsedSize={0}>
+        <Panel id="context" panelRef={leftPanel} defaultSize={22} minSize={18} collapsible collapsedSize={0}>
           <div className="flex h-full min-w-[250px] flex-col">
             <RunRail runs={runs} selected={run.id} onNew={onNew} onSelect={onSelect} />
             <RunContext run={run} onCancel={() => mutation.mutate(() => api.cancel(run.id))} />
           </div>
         </Panel>
         <Separator className="group relative w-3 cursor-col-resize bg-stone-200 after:absolute after:inset-x-1 after:top-[40%] after:bottom-[40%] after:rounded after:bg-stone-400 hover:after:bg-violet-500" />
-        <Panel id="conversation" defaultSize={46} minSize={33}>
+        <Panel id="conversation" defaultSize={47} minSize={33}>
           <AgentConversation
             run={run}
             events={events.data ?? []}
