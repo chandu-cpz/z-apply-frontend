@@ -1,24 +1,45 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Bot, CircleAlert, LoaderCircle, ShieldAlert, Wrench } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import { Bot, CircleAlert, LoaderCircle, Send, ShieldAlert, Wrench } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ActivityEvent, HumanRequest, Run } from "../types";
 import { ToolActivity } from "./ai/tool-activity";
 
-interface Props { run: Run; events: ActivityEvent[]; pendingRequest?: HumanRequest; }
+interface Props { run: Run; events: ActivityEvent[]; pendingRequest?: HumanRequest; busy?: boolean; onSendContext(content: string): void; }
 
-export function AgentConversation({ run, events, pendingRequest }: Props) {
+export function AgentConversation({ run, events, pendingRequest, busy = false, onSendContext }: Props) {
   const viewport = useRef<HTMLDivElement>(null);
   const activity = useMemo(() => curateEvents(events), [events]);
   // TanStack Virtual intentionally returns imperative functions; this component is not compiler-memoized.
   // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({ count: activity.length, getScrollElement: () => viewport.current, estimateSize: () => 132, overscan: 6 });
   useEffect(() => { if (activity.length) virtualizer.scrollToIndex(activity.length - 1, { align: "end" }); }, [activity.length, virtualizer]);
-  return <section className="grid h-full min-h-0 grid-rows-[auto_auto_minmax(0,1fr)] overflow-hidden bg-white dark:bg-zinc-950">
+  return <section className="grid h-full min-h-0 grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden bg-white dark:bg-zinc-950">
     <header className="flex items-center justify-between border-b border-stone-200 px-6 py-4 dark:border-zinc-800"><div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-violet-600 text-violet-50 shadow-lg shadow-violet-200 dark:shadow-violet-950"><Bot size={18}/></span><div><span className="font-mono text-[10px] tracking-[.14em] text-stone-500 dark:text-zinc-500">LIVE RUN NARRATIVE</span><h2 className="mt-1 text-lg font-semibold tracking-tight text-stone-950 dark:text-zinc-100">What the agent is doing</h2></div></div><div className="hidden font-mono text-[10px] text-stone-500 dark:text-zinc-500 sm:block"><span className="mr-1.5 inline-block size-1.5 rounded-full bg-cyan-500 shadow-sm shadow-cyan-300"/>Streaming activity</div></header>
     <div className="flex items-start gap-3 border-b border-stone-200 bg-stone-50 px-6 py-4 dark:border-zinc-800 dark:bg-zinc-900/50"><span className={`mt-3 size-2 shrink-0 rounded-full ${nowTone(run.status)}`}/><div><span className="font-mono text-[10px] tracking-[.14em] text-stone-500 dark:text-zinc-500">HAPPENING NOW</span><p className="mt-1.5 text-[15px] leading-relaxed text-stone-800 dark:text-zinc-200">{nowDescription(run)}</p></div><span className="ml-auto mt-1 hidden shrink-0 rounded-full border border-stone-300 px-2 py-1 font-mono text-[9px] text-stone-500 dark:border-zinc-700 dark:text-zinc-500 sm:inline">{run.status === "human_control" ? "You control" : "Agent controls"}</span></div>
     <div className="min-h-0 overflow-y-auto scroll-smooth" ref={viewport} aria-live="polite"><div className="mx-auto w-full max-w-5xl px-5 py-5"><div className="mb-4 ml-11 font-mono text-[10px] tracking-[.1em] text-stone-400 uppercase dark:text-zinc-600">Verified activity · {activity.length} events</div><div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>{virtualizer.getVirtualItems().map((row) => { const event = activity[row.index]; return event ? <div className="absolute top-0 left-0 w-full pb-4" data-index={row.index} key={event.database_id} ref={virtualizer.measureElement} style={{ transform: `translateY(${row.start}px)` }}><AnimatePresence initial={false}><ConversationMessage event={event}/></AnimatePresence></div> : null; })}</div><div className="mt-2">{pendingRequest ? <HumanNeeded request={pendingRequest}/> : <ListeningState run={run}/>}</div></div></div>
+    <SteeringComposer run={run} busy={busy} onSend={onSendContext}/>
   </section>;
+}
+
+function SteeringComposer({ run, busy, onSend }: { run: Run; busy: boolean; onSend(content: string): void }) {
+  const [content, setContent] = useState("");
+  const disabled = run.status === "terminal" || busy;
+  const submit = () => {
+    const value = content.trim();
+    if (!value || disabled) return;
+    onSend(value);
+    setContent("");
+  };
+  return <form className="border-t border-stone-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950" onSubmit={(event) => { event.preventDefault(); submit(); }}>
+    <div className="rounded-xl border border-stone-300 bg-stone-50 p-2 shadow-sm focus-within:border-violet-400 focus-within:ring-2 focus-within:ring-violet-100 dark:border-zinc-700 dark:bg-zinc-900 dark:focus-within:border-violet-500 dark:focus-within:ring-violet-950">
+      <textarea className="max-h-36 min-h-12 w-full resize-none bg-transparent px-1.5 py-1 text-sm leading-relaxed text-stone-900 outline-none placeholder:text-stone-400 disabled:cursor-not-allowed disabled:opacity-50 dark:text-zinc-100 dark:placeholder:text-zinc-600" value={content} maxLength={8000} onChange={(event) => setContent(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); submit(); } }} placeholder={run.status === "terminal" ? "This run has ended" : "Steer the agent, correct a fact, or add context…"} disabled={disabled}/>
+      <div className="mt-1 flex items-center justify-between gap-2 px-1">
+        <span className="font-mono text-[9px] uppercase tracking-[.08em] text-stone-400 dark:text-zinc-600">Injected into the active Core goal · Shift+Enter for newline</span>
+        <button className="flex shrink-0 items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-xs font-medium text-white hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40" type="submit" disabled={disabled || !content.trim()}><Send size={13}/>{busy ? "Delivering" : "Send"}</button>
+      </div>
+    </div>
+  </form>;
 }
 
 function ConversationMessage({ event }: { event: ActivityEvent }) {
@@ -29,10 +50,11 @@ function ConversationMessage({ event }: { event: ActivityEvent }) {
 function HumanNeeded({ request }: { request: HumanRequest }) { return <article className="grid grid-cols-[30px_minmax(0,1fr)] gap-2.5"><span className="grid size-[29px] place-items-center rounded-lg bg-amber-200 text-amber-950"><ShieldAlert size={15}/></span><div className="min-w-0 rounded-r-xl rounded-bl-xl border border-amber-300/50 bg-amber-950/40 p-3"><div className="flex items-baseline gap-2"><b className="text-xs text-amber-100">Your input is needed</b><span className="font-mono text-[10px] text-amber-200/70">agent paused safely</span></div><p className="mt-2 text-sm leading-relaxed text-amber-50">{request.question}</p><small className="mt-2 block text-xs text-amber-200">Use the human checkpoint beside the browser.</small></div></article>; }
 function ListeningState({ run }: { run: Run }) { if (run.status === "terminal") return <div className="ml-10 border-l-2 border-zinc-700 pl-3 text-xs text-zinc-500">This run has finished. Its recorded outcome is in the context pane.</div>; return <div className="ml-10 flex items-center gap-2 text-xs text-zinc-500"><LoaderCircle className="animate-spin text-cyan-300" size={14}/>{run.status === "waiting_human" ? "Waiting for your decision" : "Listening for the next verified update"}</div>; }
 
-function nowDescription(run: Run): string { if (run.status === "waiting_human") return "The agent has paused safely and needs your response before continuing."; if (run.status === "human_control") return "You have browser control. The agent is paused until you return it."; if (run.status === "terminal") return run.summary || "This run has reached its recorded outcome."; return `${agentStartedDescription(canonicalAgent(run.current_agent))} Phase: ${run.phase.replaceAll("_", " ")}.`; }
+function nowDescription(run: Run): string { if (run.status === "waiting_human") return "The agent has paused safely and needs your response before continuing."; if (run.status === "human_control") return "You have browser control. The agent is paused until you return it."; if (run.status === "terminal") return run.outcome === "completed" ? "Application completed. Review the verified outcome below." : run.outcome === "cancelled" ? "This run was cancelled." : "This run stopped before completion. The terminal event below contains the full reason."; return `${agentStartedDescription(canonicalAgent(run.current_agent))} Phase: ${run.phase.replaceAll("_", " ")}.`; }
 function nowTone(status: Run["status"]): string { if (status === "waiting_human") return "bg-amber-300 shadow-sm shadow-amber-300"; if (status === "human_control") return "bg-violet-300 shadow-sm shadow-violet-300"; if (status === "terminal") return "bg-zinc-600"; return "bg-cyan-300 shadow-sm shadow-cyan-300"; }
-function speaker(event: ActivityEvent): string { const candidate = event.source.agent || event.source.name || event.source.component; if (candidate) return candidate.replaceAll("_", " "); if (event.type.startsWith("browser.")) return "Browser workspace"; return "Application agent"; }
-function describe(event: ActivityEvent): string { const payload = event.payload; for (const key of ["message", "summary", "detail", "description", "action", "reason"]) { const value = payload[key]; if (typeof value === "string" && value.trim()) return value; } const toolName = typeof payload.tool_name === "string" ? payload.tool_name : ""; if (toolName === "task") return event.type === "tool.started" ? "Delegating a focused step to a specialist." : "The delegated specialist returned structured evidence."; if (toolName) return `${event.type === "tool.started" ? "Running" : "Completed"} ${toolName.replaceAll("_", " ")}.`; const descriptions: Record<string, string> = { "run.queued": "The application has been placed in the execution queue.", "run.started": "The run has started and the persistent workspace is being prepared.", "run.terminal": "The run reached a terminal state. Review the outcome in the context pane.", "agent.started": agentStartedDescription(event.source.agent), "agent.completed": "A specialist completed its assigned step and returned evidence to the orchestrator.", "tool.started": "Inspecting the current browser evidence before taking the next action.", "tool.completed": "The browser action completed and its evidence was recorded.", "human.requested": "The agent needs an explicit human decision before it can continue.", "human.resolved": "Your response was recorded and the agent can continue safely.", "browser.control_taken": "Browser control is now with you; agent mutations are paused.", "browser.control_returned": "Browser control was returned to the agent.", "submission.review_ready": "Independent review found the application complete and ready for your approval.", "submission.review_not_ready": "Independent review found remaining work before submission can be requested.", "browser.page_lost": "The run-owned browser page is no longer available." }; return descriptions[event.type] || `Recorded ${event.type.replaceAll(".", " ").replaceAll("_", " ")}.`; }
+function speaker(event: ActivityEvent): string { if (event.type === "context.received") return "You"; const candidate = event.source.agent || event.source.name || event.source.component; if (candidate) return candidate.replaceAll("_", " "); if (event.type.startsWith("browser.")) return "Browser workspace"; return "Application agent"; }
+function describe(event: ActivityEvent): string { const payload = event.payload; if (event.type === "context.received" && typeof payload.content === "string") return payload.content; if (event.type.startsWith("model.")) return describeModel(event); for (const key of ["message", "summary", "detail", "description", "action", "reason"]) { const value = payload[key]; if (typeof value === "string" && value.trim()) return value; } const toolName = typeof payload.tool_name === "string" ? payload.tool_name : ""; if (toolName === "task") { const input = payload.input && typeof payload.input === "object" && !Array.isArray(payload.input) ? payload.input as Record<string, unknown> : {}; const specialist = typeof input.subagent_type === "string" ? input.subagent_type : "specialist"; return event.type === "tool.started" ? `Delegating a focused step to ${specialist}.` : `${specialist} returned authoritative tool output.`; } if (toolName) return `${event.type === "tool.started" ? "Running" : event.type === "tool.failed" ? "Failed" : "Completed"} ${toolName.replaceAll("_", " ")}.`; const descriptions: Record<string, string> = { "run.queued": "The application has been placed in the execution queue.", "run.started": "The run has started and the persistent workspace is being prepared.", "run.terminal": "The run reached a terminal state. Review the outcome in the context pane.", "agent.started": agentStartedDescription(event.source.agent), "agent.completed": "A specialist completed its assigned step and returned evidence to the orchestrator.", "tool.started": "Inspecting the current browser evidence before taking the next action.", "tool.completed": "The browser action completed and its evidence was recorded.", "human.requested": "The agent needs an explicit human decision before it can continue.", "human.resolved": "Your response was recorded and the agent can continue safely.", "browser.control_taken": "Browser control is now with you; agent mutations are paused.", "browser.control_returned": "Browser control was returned to the agent.", "submission.review_ready": "Independent review found the application complete and ready for your approval.", "submission.review_not_ready": "Independent review found remaining work before submission can be requested.", "browser.page_lost": "The run-owned browser page is no longer available." }; return descriptions[event.type] || `Recorded ${event.type.replaceAll(".", " ").replaceAll("_", " ")}.`; }
+function describeModel(event: ActivityEvent): string { const model = typeof event.payload.model_id === "string" ? event.payload.model_id : "model"; const role = typeof event.payload.role === "string" ? event.payload.role.replaceAll("_", " ") : "agent"; if (event.type === "model.selected") return `${role} selected ${model}.`; if (event.type === "model.failed") return `${model} failed for ${role}: ${String(event.payload.error || event.payload.error_type || "provider failure")}`; if (event.type === "model.rotated") return `Rotating away from ${model}: ${String(event.payload.reason || "recovery")}.`; if (event.type === "model.rate_limited") return `${model} was rate limited; the router will select another eligible model.`; return `${event.type.replaceAll(".", " ")}: ${model}.`; }
 function curateEvents(events: ActivityEvent[]): ActivityEvent[] {
   const retained: ActivityEvent[] = [];
   const toolPositions = new Map<string, number>();
@@ -50,7 +72,7 @@ function curateEvents(events: ActivityEvent[]): ActivityEvent[] {
       }
       continue;
     }
-    if (event.level === "error" || event.level === "warning" || event.type.startsWith("run.") || event.type.startsWith("human.") || event.type.startsWith("browser.") || event.type.startsWith("submission.") || event.type.startsWith("recovery.") || event.type === "model.selected") {
+    if (event.level === "error" || event.level === "warning" || event.type.startsWith("run.") || event.type.startsWith("human.") || event.type.startsWith("browser.") || event.type.startsWith("submission.") || event.type.startsWith("recovery.") || event.type.startsWith("model.") || event.type === "context.received") {
       retained.push(event);
       continue;
     }
@@ -60,7 +82,7 @@ function curateEvents(events: ActivityEvent[]): ActivityEvent[] {
       lastAgent = agent;
       continue;
     }
-    if (event.type === "agent.completed" || event.type === "agent.failed") {
+    if (event.type === "agent.failed") {
       retained.push(event);
       continue;
     }

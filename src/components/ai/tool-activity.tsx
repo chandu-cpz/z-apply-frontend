@@ -8,6 +8,7 @@ export function ToolActivity({ event }: { event: ActivityEvent }) {
   const state = event.type.split(".").at(-1) ?? "activity";
   const input = record(event.payload.input);
   const facts = toolFacts(name, input, event.payload);
+  const callId = text(event.payload.tool_call_id);
 
   return (
     <div className="mt-3 overflow-hidden rounded-lg border border-stone-200 bg-white font-mono text-[10px] dark:border-zinc-700 dark:bg-zinc-950">
@@ -20,6 +21,8 @@ export function ToolActivity({ event }: { event: ActivityEvent }) {
           {state}
         </span>
       </div>
+
+      {callId && <div className="border-t border-stone-100 px-3 py-1.5 text-[9px] text-stone-400 dark:border-zinc-800 dark:text-zinc-600">call {callId}</div>}
 
       {facts.length > 0 && (
         <dl className="grid gap-2 border-t border-stone-100 px-3 py-3 text-stone-600 dark:border-zinc-800 dark:text-zinc-400">
@@ -74,6 +77,12 @@ function toolFacts(name: string, input: Record<string, unknown>, payload: Record
     const paths = array(input.paths).map(text).filter(Boolean).map(fileName);
     if (paths.length) push(facts, "files", paths.join(", "));
   }
+  for (const [key, value] of Object.entries(input)) {
+    if (["description", "subagent_type", "element", "target", "url", "text", "fields", "paths"].includes(key)) continue;
+    push(facts, key.replaceAll("_", " "), display(value));
+  }
+  const output = record(payload.output);
+  push(facts, "result", display(output.content ?? payload.output));
   push(facts, "error", text(payload.error));
   push(facts, "reason", text(payload.reason));
   return facts;
@@ -105,6 +114,13 @@ function text(value: unknown): string {
 
 function fileName(path: string): string {
   return path.split(/[\\/]/).at(-1) || "file";
+}
+
+function display(value: unknown): string {
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (value && typeof value === "object") return JSON.stringify(value, null, 2);
+  return "";
 }
 
 function stateTone(state: string): string {
