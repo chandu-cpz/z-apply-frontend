@@ -1,11 +1,11 @@
-import { Plus, X } from "lucide-react";
+import { PanelLeftClose, Plus, X } from "lucide-react";
 import type { Run } from "../types";
 
-interface Props { runs: Run[]; selected?: string; onSelect: (run: Run) => void; onNew: () => void; }
+interface Props { runs: Run[]; selected?: string; onSelect: (run: Run) => void; onNew: () => void; onCollapse(): void; }
 
-export function RunRail({ runs, selected, onSelect, onNew }: Props) {
+export function RunRail({ runs, selected, onSelect, onNew, onCollapse }: Props) {
   return <nav className="border-b border-stone-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950" aria-label="Application runs">
-    <div className="mb-2 flex items-center justify-between px-1"><span className="font-mono text-[10px] tracking-[.12em] text-stone-500 dark:text-zinc-500">APPLICATIONS</span><span className="font-mono text-[10px] text-stone-400 dark:text-zinc-600">{runs.length}</span></div>
+    <div className="mb-2 flex items-center justify-between px-1"><span className="font-mono text-[10px] tracking-[.12em] text-stone-500 dark:text-zinc-500">APPLICATIONS</span><div className="flex items-center gap-2"><span className="font-mono text-[10px] text-stone-400 dark:text-zinc-600">{runs.length}</span><button className="grid size-6 place-items-center rounded text-stone-400 hover:bg-stone-100 hover:text-stone-900 dark:text-zinc-500 dark:hover:bg-zinc-900 dark:hover:text-zinc-100" onClick={onCollapse} title="Collapse sidebar"><PanelLeftClose size={14} /></button></div></div>
     <div className="max-h-44 space-y-1 overflow-y-auto pr-1">
     {runs.map((run) => <button className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs transition ${selected === run.id ? "bg-violet-50 text-violet-950 dark:bg-violet-950/60 dark:text-violet-100" : "text-stone-500 hover:bg-stone-100 hover:text-stone-900 dark:text-zinc-500 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"}`} onClick={() => onSelect(run)} key={run.id}>
       <span className={`size-1.5 shrink-0 rounded-full ${statusColor(run.status)}`} />

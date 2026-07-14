@@ -113,6 +113,7 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
     queryKey: ["human", run.id],
     queryFn: () => api.human(run.id),
     refetchInterval: 3_000,
+    enabled: run.status !== "terminal",
   });
   const live = useQuery({
     queryKey: ["live"],
@@ -142,7 +143,13 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
       >
         <Panel id="context" panelRef={leftPanel} defaultSize={22} minSize={18} collapsible collapsedSize={0}>
           <div className="flex h-full min-w-[250px] flex-col">
-            <RunRail runs={runs} selected={run.id} onNew={onNew} onSelect={onSelect} />
+            <RunRail
+              runs={runs}
+              selected={run.id}
+              onNew={onNew}
+              onSelect={onSelect}
+              onCollapse={() => leftPanel.current?.collapse()}
+            />
             <RunContext run={run} onCancel={() => mutation.mutate(() => api.cancel(run.id))} />
           </div>
         </Panel>
@@ -157,7 +164,7 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
         </Panel>
         <Separator className="group relative w-3 cursor-col-resize bg-stone-200 after:absolute after:inset-x-1 after:top-[40%] after:bottom-[40%] after:rounded after:bg-stone-400 hover:after:bg-violet-500" />
         <Panel id="workspace" panelRef={rightPanel} defaultSize={31} minSize={24} collapsible collapsedSize={0}>
-          <aside className="flex h-full min-w-[280px] flex-col gap-3 bg-stone-100 p-3">
+          <aside className="flex h-full min-w-[280px] flex-col gap-3 bg-stone-100 p-3 dark:bg-zinc-950">
             <BrowserPanel
               run={run}
               live={live.data}
