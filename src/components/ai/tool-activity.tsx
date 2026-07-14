@@ -1,18 +1,20 @@
 import { Braces, ChevronRight } from "lucide-react";
+import { useState } from "react";
 import type { ActivityEvent } from "../../types";
 
 /** Operational tool evidence. Core has already removed secrets and runtime objects. */
 export function ToolActivity({ event }: { event: ActivityEvent }) {
-  if (!event.type.startsWith("tool.")) return null;
   const name = text(event.payload.tool_name) || "tool";
   const state = event.type.split(".").at(-1) ?? "activity";
+  const [expanded, setExpanded] = useState(state === "failed" || state === "denied");
+  if (!event.type.startsWith("tool.")) return null;
   const input = record(event.payload.input);
   const facts = toolFacts(name, input, event.payload);
   const callId = text(event.payload.tool_call_id);
 
   return (
     <div className="mt-3 overflow-hidden rounded-lg border border-stone-200 bg-white font-mono text-[10px] dark:border-zinc-700 dark:bg-zinc-950">
-      <div className="flex items-center gap-2 px-3 py-2.5">
+      <button className="flex w-full items-center gap-2 px-3 py-2.5 text-left hover:bg-stone-50 dark:hover:bg-zinc-900" type="button" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>
         <Braces size={13} className="shrink-0 text-violet-500" />
         <span className="min-w-0 truncate font-semibold text-stone-800 dark:text-zinc-200">
           {name.replaceAll("_", " ")}
@@ -20,8 +22,10 @@ export function ToolActivity({ event }: { event: ActivityEvent }) {
         <span className={`ml-auto rounded px-1.5 py-0.5 uppercase ${stateTone(state)}`}>
           {state}
         </span>
-      </div>
+        <ChevronRight size={12} className={`shrink-0 text-stone-400 transition-transform ${expanded ? "rotate-90" : ""}`}/>
+      </button>
 
+      {expanded && <>
       {callId && <div className="border-t border-stone-100 px-3 py-1.5 text-[9px] text-stone-400 dark:border-zinc-800 dark:text-zinc-600">call {callId}</div>}
 
       {facts.length > 0 && (
@@ -29,7 +33,7 @@ export function ToolActivity({ event }: { event: ActivityEvent }) {
           {facts.map((fact) => (
             <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-2" key={`${fact.label}-${fact.value}`}>
               <dt className="uppercase tracking-[.08em] text-stone-400 dark:text-zinc-600">{fact.label}</dt>
-              <dd className="min-w-0 whitespace-pre-wrap break-words text-stone-700 dark:text-zinc-300">{fact.value}</dd>
+              <dd className="max-h-36 min-w-0 overflow-auto whitespace-pre-wrap break-words text-stone-700 dark:text-zinc-300">{fact.value}</dd>
             </div>
           ))}
         </dl>
@@ -44,6 +48,7 @@ export function ToolActivity({ event }: { event: ActivityEvent }) {
           {JSON.stringify(event.payload, null, 2)}
         </pre>
       </details>
+      </>}
     </div>
   );
 }
@@ -82,10 +87,20 @@ function toolFacts(name: string, input: Record<string, unknown>, payload: Record
     push(facts, key.replaceAll("_", " "), display(value));
   }
   const output = record(payload.output);
-  push(facts, "result", display(output.content ?? payload.output));
+  push(facts, "result", outputSummary(name, output.content ?? payload.output));
   push(facts, "error", text(payload.error));
   push(facts, "reason", text(payload.reason));
   return facts;
+}
+
+function outputSummary(name: string, value: unknown): string {
+  const rendered = display(value);
+  if (!rendered) return "";
+  if (name.startsWith("browser_") && rendered.length > 320) {
+    return `Browser evidence captured (${rendered.length.toLocaleString()} characters). Open Normalized payload for the complete snapshot.`;
+  }
+  if (rendered.length <= 600) return rendered;
+  return `${rendered.slice(0, 520)}\n… ${rendered.length.toLocaleString()} characters total; open Normalized payload for all data.`;
 }
 
 function taskSections(value: string): { operation: string; success: string } {
