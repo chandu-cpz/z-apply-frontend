@@ -8,5 +8,5 @@ export function CodeBlock({ value }: { value: object }) {
       .then(({ codeToHtml }) => codeToHtml(code, { lang: "json", theme: "github-dark" }))
       .then(setHtml);
   }, [code]);
-  return html ? <div className="shiki-code" dangerouslySetInnerHTML={{ __html: html }} /> : <pre>{code}</pre>;
+  return html ? <div className="mt-2 max-h-28 overflow-auto rounded bg-slate-950 text-[9px]" dangerouslySetInnerHTML={{ __html: html }} /> : <pre className="mt-2 max-h-28 overflow-auto rounded bg-slate-950 p-2 text-[9px] text-slate-300">{code}</pre>;
 }
