@@ -12,9 +12,8 @@ import { toast } from "sonner";
 import { api } from "./api";
 import { AgentConversation } from "./components/agent-conversation";
 import { BrowserPanel } from "./components/browser-panel";
-import { HumanPanel } from "./components/human-panel";
 import { RunContext } from "./components/run-context";
-import { RunTabs } from "./components/run-tabs";
+import { RunRail } from "./components/run-tabs";
 import { StartRun } from "./components/start-run";
 import { useEventStream } from "./hooks";
 import type { Run } from "./types";
@@ -50,21 +49,20 @@ export function App() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-zinc-950 font-mono text-zinc-100">
       <Header active={selected} />
-      <RunTabs
-        runs={runs.data ?? []}
-        selected={selected?.id}
-        onNew={() => setSelectedId(undefined)}
-        onSelect={(run) => {
-          setSelectedId(run.id);
-          void api.focus(run.id).catch(() => undefined);
-        }}
-      />
       {!selected || !selectedId ? (
         <StartRun onSubmit={(url, task) => create.mutate({ url, task })} />
       ) : (
-        <Cockpit run={selected} />
+        <Cockpit
+          run={selected}
+          runs={runs.data ?? []}
+          onNew={() => setSelectedId(undefined)}
+          onSelect={(nextRun) => {
+            setSelectedId(nextRun.id);
+            void api.focus(nextRun.id).catch(() => undefined);
+          }}
+        />
       )}
     </div>
   );
@@ -72,24 +70,31 @@ export function App() {
 
 function Header({ active }: { active?: Run }) {
   return (
-    <header className="flex h-15 items-center gap-7 border-b border-slate-800 bg-slate-950/95 px-7 backdrop-blur-xl">
-      <a className="flex items-center gap-2.5 text-sm font-bold tracking-[.06em] text-slate-100" href="/">
-        <span className="grid size-8 place-items-center rounded-lg border border-violet-400/60 bg-gradient-to-br from-violet-600 to-slate-800 text-violet-100 shadow-lg shadow-violet-950/50"><Command size={18} /></span>
-        <span>Z-APPLY <i className="hidden font-mono text-[9px] font-normal tracking-[.1em] text-slate-400 sm:inline">/ local agent workspace</i></span>
+    <header className="flex h-15 items-center gap-7 border-b border-zinc-800 bg-zinc-950/95 px-7 backdrop-blur-xl">
+      <a className="flex items-center gap-2.5 text-sm font-bold tracking-[.06em] text-zinc-100" href="/">
+        <span className="grid size-8 place-items-center rounded-lg border border-violet-500/70 bg-violet-600 text-violet-50 shadow-lg shadow-violet-950/50"><Command size={18} /></span>
+        <span>Z-APPLY <i className="hidden font-mono text-[9px] font-normal tracking-[.1em] text-zinc-500 sm:inline">/ local agent workspace</i></span>
       </a>
-      <div className="ml-auto hidden font-mono text-[10px] tracking-[.08em] text-slate-400 md:block">
-        <span className="mr-2 inline-block size-1.5 rounded-full bg-emerald-300 shadow-sm shadow-emerald-300" /> CORE ONLINE
-        <b className="ml-2 text-violet-200">{active?.current_model || "ROUTER READY"}</b>
+      <div className="ml-auto hidden font-mono text-[10px] tracking-[.08em] text-zinc-500 md:block">
+        <span className="mr-2 inline-block size-1.5 rounded-full bg-cyan-300 shadow-sm shadow-cyan-300" /> CORE ONLINE
+        <b className="ml-2 text-zinc-300">{active?.current_model || "ROUTER READY"}</b>
       </div>
       <nav className="hidden gap-1 sm:flex">
-        <button className="flex items-center gap-1.5 px-2.5 py-2 text-xs text-slate-400 transition hover:text-white"><History size={16} /> History</button>
-        <button className="flex items-center gap-1.5 px-2.5 py-2 text-xs text-slate-400 transition hover:text-white"><Settings size={16} /> Diagnostics</button>
+        <button className="flex items-center gap-1.5 px-2.5 py-2 text-xs text-zinc-500 transition hover:text-white"><History size={16} /> History</button>
+        <button className="flex items-center gap-1.5 px-2.5 py-2 text-xs text-zinc-500 transition hover:text-white"><Settings size={16} /> Diagnostics</button>
       </nav>
     </header>
   );
 }
 
-function Cockpit({ run }: { run: Run }) {
+interface CockpitProps {
+  run: Run;
+  runs: Run[];
+  onNew(): void;
+  onSelect(run: Run): void;
+}
+
+function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
   const query = useQueryClient();
   const leftPanel = usePanelRef();
   const rightPanel = usePanelRef();
@@ -123,39 +128,31 @@ function Cockpit({ run }: { run: Run }) {
   const pending = human.data?.find((item) => item.status === "pending");
 
   return (
-    <main className="p-3 sm:p-5">
-      <section className="flex items-center justify-between gap-4 px-1 pb-4">
-        <div>
-          <span className="font-mono text-[10px] tracking-[.14em] text-emerald-300">ACTIVE APPLICATION</span>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-100">{run.company || hostname(run.job_url)}</h1>
-          <p className="mt-1 text-xs capitalize text-slate-400">{run.role || "Role intelligence in progress"} <span className="mx-1.5 text-slate-600">•</span> {run.phase.replaceAll("_", " ")}</p>
-        </div>
-        <div className="hidden gap-2 sm:flex" aria-label="Pane controls">
-          <button className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-2 text-[11px] text-violet-200 transition hover:bg-slate-800" onClick={() => leftPanel.current?.isCollapsed() ? leftPanel.current.expand() : leftPanel.current?.collapse()}>
-            <PanelLeftClose size={15} /> Context
-          </button>
-          <button className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-2 text-[11px] text-violet-200 transition hover:bg-slate-800" onClick={() => rightPanel.current?.isCollapsed() ? rightPanel.current.expand() : rightPanel.current?.collapse()}>
-            <PanelRightClose size={15} /> Browser
-          </button>
-        </div>
-      </section>
-
+    <main>
       <Group
         orientation="horizontal"
-        className="min-h-[calc(100vh-13.4rem)] overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60 shadow-2xl shadow-black/25"
+        className="min-h-[calc(100vh-3.75rem)] overflow-hidden bg-zinc-950"
         defaultLayout={layout.defaultLayout}
         onLayoutChanged={layout.onLayoutChanged}
       >
-        <Panel id="context" panelRef={leftPanel} defaultSize={22} minSize={17} collapsible collapsedSize={0}>
-          <RunContext run={run} onCancel={() => mutation.mutate(() => api.cancel(run.id))} />
+        <Panel id="context" panelRef={leftPanel} defaultSize={23} minSize={18} collapsible collapsedSize={0}>
+          <div className="flex h-full min-w-[250px] flex-col">
+            <RunRail runs={runs} selected={run.id} onNew={onNew} onSelect={onSelect} />
+            <RunContext run={run} onCancel={() => mutation.mutate(() => api.cancel(run.id))} />
+          </div>
         </Panel>
-        <Separator className="group relative w-3 cursor-col-resize bg-slate-950 after:absolute after:inset-x-1 after:top-[40%] after:bottom-[40%] after:rounded after:bg-slate-600 hover:after:bg-violet-300" />
+        <Separator className="group relative w-3 cursor-col-resize bg-zinc-950 after:absolute after:inset-x-1 after:top-[40%] after:bottom-[40%] after:rounded after:bg-zinc-700 hover:after:bg-violet-400" />
         <Panel id="conversation" defaultSize={46} minSize={33}>
-          <AgentConversation run={run} events={events.data ?? []} pendingRequest={pending} />
+          <AgentConversation
+            run={run}
+            events={events.data ?? []}
+            pendingRequest={pending}
+            onAnswer={(answer) => pending && mutation.mutate(() => api.answer(run.id, pending.request_id, answer))}
+          />
         </Panel>
-        <Separator className="group relative w-3 cursor-col-resize bg-slate-950 after:absolute after:inset-x-1 after:top-[40%] after:bottom-[40%] after:rounded after:bg-slate-600 hover:after:bg-violet-300" />
-        <Panel id="workspace" panelRef={rightPanel} defaultSize={32} minSize={24} collapsible collapsedSize={0}>
-          <aside className="grid h-full min-w-[280px] grid-rows-[minmax(330px,1fr)_auto] gap-3 bg-slate-950/40 p-3">
+        <Separator className="group relative w-3 cursor-col-resize bg-zinc-950 after:absolute after:inset-x-1 after:top-[40%] after:bottom-[40%] after:rounded after:bg-zinc-700 hover:after:bg-violet-400" />
+        <Panel id="workspace" panelRef={rightPanel} defaultSize={31} minSize={24} collapsible collapsedSize={0}>
+          <aside className="flex h-full min-w-[280px] flex-col gap-3 bg-zinc-950 p-3">
             <BrowserPanel
               run={run}
               live={live.data}
@@ -163,23 +160,13 @@ function Cockpit({ run }: { run: Run }) {
               onControl={() => mutation.mutate(() => api.takeControl(run.id))}
               onReturn={() => mutation.mutate(() => api.returnControl(run.id))}
             />
-            <HumanPanel
-              run={run}
-              request={pending}
-              onAnswer={(answer) => pending && mutation.mutate(() => api.answer(run.id, pending.request_id, answer))}
-              onDecision={(decision) => pending && mutation.mutate(() => api.decide(run.id, pending.request_id, decision))}
-            />
           </aside>
         </Panel>
       </Group>
+      <div className="fixed right-4 bottom-4 z-20 hidden gap-2 lg:flex">
+        <button className="flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-900 px-2.5 py-2 text-[11px] text-zinc-300 shadow-lg shadow-black/30 hover:text-white" onClick={() => leftPanel.current?.isCollapsed() ? leftPanel.current.expand() : leftPanel.current?.collapse()}><PanelLeftClose size={15} /> Runs</button>
+        <button className="flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-900 px-2.5 py-2 text-[11px] text-zinc-300 shadow-lg shadow-black/30 hover:text-white" onClick={() => rightPanel.current?.isCollapsed() ? rightPanel.current.expand() : rightPanel.current?.collapse()}><PanelRightClose size={15} /> Browser</button>
+      </div>
     </main>
   );
-}
-
-function hostname(url: string): string {
-  try {
-    return new URL(url).hostname.replace("www.", "");
-  } catch {
-    return "New application";
-  }
 }
