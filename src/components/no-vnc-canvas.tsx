@@ -6,13 +6,15 @@ interface Props { websocketUrl?: string; viewOnly: boolean; }
 export function NoVncCanvas({ websocketUrl, viewOnly }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const client = useRef<{ viewOnly: boolean; disconnect(): void } | undefined>(undefined);
+  const viewOnlyRef = useRef(viewOnly);
+  useEffect(() => { viewOnlyRef.current = viewOnly; }, [viewOnly]);
   useEffect(() => {
     if (!host.current || !websocketUrl || client.current) return;
     let active = true;
     void import("@novnc/novnc").then(({ default: RFB }) => {
       if (!active || !host.current) return;
       const rfb = new RFB(host.current, websocketUrl, { credentials: {} });
-      rfb.viewOnly = viewOnly;
+      rfb.viewOnly = viewOnlyRef.current;
       rfb.scaleViewport = true;
       client.current = rfb;
     });

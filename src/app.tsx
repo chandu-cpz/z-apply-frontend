@@ -7,7 +7,7 @@ import {
   usePanelRef,
 } from "react-resizable-panels";
 import { Command, History, Moon, PanelLeftClose, PanelRightClose, Settings, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { api } from "./api";
 import { AgentConversation } from "./components/agent-conversation";
@@ -22,6 +22,7 @@ import { useUiStore } from "./ui-store";
 export function App() {
   const query = useQueryClient();
   const [selectedId, setSelectedId] = useState<string>();
+  const [isCreatingRun, setIsCreatingRun] = useState(false);
   const theme = useUiStore((state) => state.theme);
   useEventStream();
 
@@ -34,15 +35,12 @@ export function App() {
     ?? runs.data?.find((run) => run.status !== "terminal")
     ?? runs.data?.[0];
 
-  useEffect(() => {
-    if (selected && selected.id !== selectedId) setSelectedId(selected.id);
-  }, [selected, selectedId]);
-
   const create = useMutation({
     mutationFn: ({ url, task }: { url: string; task: string }) => api.createRun(url, task),
     onSuccess: (run) => {
       query.setQueryData<Run[]>(["runs"], (old = []) => [run, ...old]);
       setSelectedId(run.id);
+      setIsCreatingRun(false);
       toast.success("Application queued", {
         description: "The agent will report each browser action in the live conversation.",
       });
@@ -51,17 +49,18 @@ export function App() {
   });
 
   return (
-    <div className={`${theme === "dark" ? "dark" : ""} min-h-screen bg-stone-100 font-mono text-stone-950 dark:bg-zinc-950 dark:text-zinc-100`}>
+    <div className={`${theme === "dark" ? "dark" : ""} min-h-screen bg-stone-100 font-sans text-stone-950 antialiased dark:bg-zinc-950 dark:text-zinc-100`}>
       <Header active={selected} />
-      {!selected || !selectedId ? (
+      {!selected || isCreatingRun ? (
         <StartRun onSubmit={(url, task) => create.mutate({ url, task })} />
       ) : (
         <Cockpit
           run={selected}
           runs={runs.data ?? []}
-          onNew={() => setSelectedId(undefined)}
+          onNew={() => setIsCreatingRun(true)}
           onSelect={(nextRun) => {
             setSelectedId(nextRun.id);
+            setIsCreatingRun(false);
             void api.focus(nextRun.id).catch(() => undefined);
           }}
         />
@@ -141,7 +140,7 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
         defaultLayout={layout.defaultLayout}
         onLayoutChanged={layout.onLayoutChanged}
       >
-        <Panel id="context" panelRef={leftPanel} defaultSize={22} minSize={18} collapsible collapsedSize={0}>
+        <Panel id="context" panelRef={leftPanel} defaultSize={20} minSize={18} collapsible collapsedSize={0}>
           <div className="flex h-full min-w-[250px] flex-col">
             <RunRail
               runs={runs}
@@ -154,7 +153,7 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
           </div>
         </Panel>
         <Separator className="group relative w-3 cursor-col-resize bg-stone-200 after:absolute after:inset-x-1 after:top-[40%] after:bottom-[40%] after:rounded after:bg-stone-400 hover:after:bg-violet-500" />
-        <Panel id="conversation" defaultSize={47} minSize={33}>
+        <Panel id="conversation" defaultSize={51} minSize={36}>
           <AgentConversation
             run={run}
             events={events.data ?? []}
@@ -163,7 +162,7 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
           />
         </Panel>
         <Separator className="group relative w-3 cursor-col-resize bg-stone-200 after:absolute after:inset-x-1 after:top-[40%] after:bottom-[40%] after:rounded after:bg-stone-400 hover:after:bg-violet-500" />
-        <Panel id="workspace" panelRef={rightPanel} defaultSize={31} minSize={24} collapsible collapsedSize={0}>
+        <Panel id="workspace" panelRef={rightPanel} defaultSize={29} minSize={24} collapsible collapsedSize={0}>
           <aside className="flex h-full min-w-[280px] flex-col gap-3 bg-stone-100 p-3 dark:bg-zinc-950">
             <BrowserPanel
               run={run}
