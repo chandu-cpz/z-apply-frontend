@@ -74,19 +74,19 @@ function Header({ active }: { active?: Run }) {
   const theme = useUiStore((state) => state.theme);
   const toggleTheme = useUiStore((state) => state.toggleTheme);
   return (
-    <header className="flex h-15 items-center gap-7 border-b border-zinc-800 bg-zinc-950/95 px-7 backdrop-blur-xl">
-      <a className="flex items-center gap-2.5 text-sm font-bold tracking-[.06em] text-zinc-100" href="/">
+    <header className="flex h-15 items-center gap-7 border-b border-stone-200 bg-white/95 px-7 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/95">
+      <a className="flex items-center gap-2.5 text-sm font-bold tracking-[.06em] text-stone-950 dark:text-zinc-100" href="/">
         <span className="grid size-8 place-items-center rounded-lg border border-violet-500/70 bg-violet-600 text-violet-50 shadow-lg shadow-violet-950/50"><Command size={18} /></span>
-        <span>Z-APPLY <i className="hidden font-mono text-[9px] font-normal tracking-[.1em] text-zinc-500 sm:inline">/ local agent workspace</i></span>
+        <span>Z-APPLY <i className="hidden font-mono text-[9px] font-normal tracking-[.1em] text-stone-400 dark:text-zinc-500 sm:inline">/ local agent workspace</i></span>
       </a>
-      <div className="ml-auto hidden font-mono text-[10px] tracking-[.08em] text-zinc-500 md:block">
+      <div className="ml-auto hidden font-mono text-[10px] tracking-[.08em] text-stone-500 dark:text-zinc-500 md:block">
         <span className="mr-2 inline-block size-1.5 rounded-full bg-cyan-300 shadow-sm shadow-cyan-300" /> CORE ONLINE
-        <b className="ml-2 text-zinc-300">{active?.current_model || "ROUTER READY"}</b>
+        <b className="ml-2 text-stone-700 dark:text-zinc-300">{active?.current_model || "ROUTER READY"}</b>
       </div>
       <nav className="hidden gap-1 sm:flex">
-        <button className="flex items-center gap-1.5 px-2.5 py-2 text-xs text-zinc-500 transition hover:text-white"><History size={16} /> History</button>
-        <button className="flex items-center gap-1.5 px-2.5 py-2 text-xs text-zinc-500 transition hover:text-white"><Settings size={16} /> Diagnostics</button>
-        <button className="grid size-8 place-items-center rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-white" onClick={toggleTheme} title="Toggle color theme">{theme === "light" ? <Moon size={15} /> : <Sun size={15} />}</button>
+        <button className="flex items-center gap-1.5 px-2.5 py-2 text-xs text-stone-500 transition hover:text-stone-950 dark:text-zinc-500 dark:hover:text-white"><History size={16} /> History</button>
+        <button className="flex items-center gap-1.5 px-2.5 py-2 text-xs text-stone-500 transition hover:text-stone-950 dark:text-zinc-500 dark:hover:text-white"><Settings size={16} /> Diagnostics</button>
+        <button className="grid size-8 place-items-center rounded-md text-stone-500 hover:bg-stone-100 hover:text-stone-950 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white" onClick={toggleTheme} title="Toggle color theme">{theme === "light" ? <Moon size={15} /> : <Sun size={15} />}</button>
       </nav>
     </header>
   );
