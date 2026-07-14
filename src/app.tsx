@@ -6,7 +6,7 @@ import {
   useDefaultLayout,
   usePanelRef,
 } from "react-resizable-panels";
-import { Command, History, PanelLeftClose, PanelRightClose, Settings } from "lucide-react";
+import { Command, History, Moon, PanelLeftClose, PanelRightClose, Settings, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api } from "./api";
@@ -17,10 +17,12 @@ import { RunRail } from "./components/run-tabs";
 import { StartRun } from "./components/start-run";
 import { useEventStream } from "./hooks";
 import type { Run } from "./types";
+import { useUiStore } from "./ui-store";
 
 export function App() {
   const query = useQueryClient();
   const [selectedId, setSelectedId] = useState<string>();
+  const theme = useUiStore((state) => state.theme);
   useEventStream();
 
   const runs = useQuery({
@@ -49,7 +51,7 @@ export function App() {
   });
 
   return (
-    <div className="min-h-screen bg-zinc-950 font-mono text-zinc-100">
+    <div className={`${theme === "dark" ? "dark" : ""} min-h-screen bg-stone-100 font-mono text-stone-950 dark:bg-zinc-950 dark:text-zinc-100`}>
       <Header active={selected} />
       {!selected || !selectedId ? (
         <StartRun onSubmit={(url, task) => create.mutate({ url, task })} />
@@ -69,6 +71,8 @@ export function App() {
 }
 
 function Header({ active }: { active?: Run }) {
+  const theme = useUiStore((state) => state.theme);
+  const toggleTheme = useUiStore((state) => state.toggleTheme);
   return (
     <header className="flex h-15 items-center gap-7 border-b border-zinc-800 bg-zinc-950/95 px-7 backdrop-blur-xl">
       <a className="flex items-center gap-2.5 text-sm font-bold tracking-[.06em] text-zinc-100" href="/">
@@ -82,6 +86,7 @@ function Header({ active }: { active?: Run }) {
       <nav className="hidden gap-1 sm:flex">
         <button className="flex items-center gap-1.5 px-2.5 py-2 text-xs text-zinc-500 transition hover:text-white"><History size={16} /> History</button>
         <button className="flex items-center gap-1.5 px-2.5 py-2 text-xs text-zinc-500 transition hover:text-white"><Settings size={16} /> Diagnostics</button>
+        <button className="grid size-8 place-items-center rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-white" onClick={toggleTheme} title="Toggle color theme">{theme === "light" ? <Moon size={15} /> : <Sun size={15} />}</button>
       </nav>
     </header>
   );
@@ -131,7 +136,7 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
     <main>
       <Group
         orientation="horizontal"
-        className="min-h-[calc(100vh-3.75rem)] overflow-hidden bg-zinc-950"
+        className="min-h-[calc(100vh-3.75rem)] overflow-hidden bg-stone-100"
         defaultLayout={layout.defaultLayout}
         onLayoutChanged={layout.onLayoutChanged}
       >
@@ -141,7 +146,7 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
             <RunContext run={run} onCancel={() => mutation.mutate(() => api.cancel(run.id))} />
           </div>
         </Panel>
-        <Separator className="group relative w-3 cursor-col-resize bg-zinc-950 after:absolute after:inset-x-1 after:top-[40%] after:bottom-[40%] after:rounded after:bg-zinc-700 hover:after:bg-violet-400" />
+        <Separator className="group relative w-3 cursor-col-resize bg-stone-200 after:absolute after:inset-x-1 after:top-[40%] after:bottom-[40%] after:rounded after:bg-stone-400 hover:after:bg-violet-500" />
         <Panel id="conversation" defaultSize={46} minSize={33}>
           <AgentConversation
             run={run}
@@ -150,9 +155,9 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
             onAnswer={(answer) => pending && mutation.mutate(() => api.answer(run.id, pending.request_id, answer))}
           />
         </Panel>
-        <Separator className="group relative w-3 cursor-col-resize bg-zinc-950 after:absolute after:inset-x-1 after:top-[40%] after:bottom-[40%] after:rounded after:bg-zinc-700 hover:after:bg-violet-400" />
+        <Separator className="group relative w-3 cursor-col-resize bg-stone-200 after:absolute after:inset-x-1 after:top-[40%] after:bottom-[40%] after:rounded after:bg-stone-400 hover:after:bg-violet-500" />
         <Panel id="workspace" panelRef={rightPanel} defaultSize={31} minSize={24} collapsible collapsedSize={0}>
-          <aside className="flex h-full min-w-[280px] flex-col gap-3 bg-zinc-950 p-3">
+          <aside className="flex h-full min-w-[280px] flex-col gap-3 bg-stone-100 p-3">
             <BrowserPanel
               run={run}
               live={live.data}
@@ -164,8 +169,8 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
         </Panel>
       </Group>
       <div className="fixed right-4 bottom-4 z-20 hidden gap-2 lg:flex">
-        <button className="flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-900 px-2.5 py-2 text-[11px] text-zinc-300 shadow-lg shadow-black/30 hover:text-white" onClick={() => leftPanel.current?.isCollapsed() ? leftPanel.current.expand() : leftPanel.current?.collapse()}><PanelLeftClose size={15} /> Runs</button>
-        <button className="flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-900 px-2.5 py-2 text-[11px] text-zinc-300 shadow-lg shadow-black/30 hover:text-white" onClick={() => rightPanel.current?.isCollapsed() ? rightPanel.current.expand() : rightPanel.current?.collapse()}><PanelRightClose size={15} /> Browser</button>
+        <button className="flex items-center gap-1.5 rounded-md border border-stone-300 bg-white px-2.5 py-2 text-[11px] text-stone-600 shadow-lg shadow-stone-300/50 hover:text-stone-950" onClick={() => leftPanel.current?.isCollapsed() ? leftPanel.current.expand() : leftPanel.current?.collapse()}><PanelLeftClose size={15} /> Runs</button>
+        <button className="flex items-center gap-1.5 rounded-md border border-stone-300 bg-white px-2.5 py-2 text-[11px] text-stone-600 shadow-lg shadow-stone-300/50 hover:text-stone-950" onClick={() => rightPanel.current?.isCollapsed() ? rightPanel.current.expand() : rightPanel.current?.collapse()}><PanelRightClose size={15} /> Browser</button>
       </div>
     </main>
   );
