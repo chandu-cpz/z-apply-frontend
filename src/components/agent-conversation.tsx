@@ -10,15 +10,16 @@ interface Props {
   busy?: boolean;
   onSendContext(content: string): void;
   onStop?(): void;
+  onAnswer?(requestId: string, answer: string): void;
 }
 
-export function AgentConversation({ run, events, pendingRequests, busy = false, onSendContext, onStop }: Props) {
+export function AgentConversation({ run, events, pendingRequests, busy = false, onSendContext, onStop, onAnswer }: Props) {
   const streaming = run.status === "running" || run.status === "starting";
   const status = streaming && run.current_model ? `Streaming · ${run.current_model.split("/").pop()}` : streaming ? "Streaming" : undefined;
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="min-h-0 flex-1">
-        <MessageList runId={run.id} events={events} run={run} />
+        <MessageList runId={run.id} events={events} run={run} onAnswer={onAnswer} />
       </div>
       <div className="shrink-0 px-5 pb-2">
         {pendingRequests && pendingRequests.length > 0 ? <HumanNeeded requests={pendingRequests} /> : null}

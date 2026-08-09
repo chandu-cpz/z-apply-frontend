@@ -82,13 +82,14 @@ export type TimelineItem =
   | { kind: "model-cluster"; seq: number; occurredAt: string; agent: string; entries: ModelEntry[]; selected: number; failed: number; rotated: number; retrying: number; rateLimited: number; lastModel: string; lastSub: string }
   | { kind: "browser"; seq: number; sub: string; detail: string; occurredAt: string }
   | { kind: "recovery"; seq: number; attempt: number; errorType: string; detail: string; stage: string; occurredAt: string }
-  | { kind: "human"; seq: number; sub: string; detail: string; occurredAt: string; question?: string; answer?: string; resolvedAt?: string }
+  | { kind: "human"; seq: number; sub: string; detail: string; occurredAt: string; question?: string; answer?: string; resolvedAt?: string; request_id?: string; options?: string[]; allow_free_text?: boolean }
   | { kind: "submission"; seq: number; sub: string; detail: string; occurredAt: string }
   | { kind: "artifact"; seq: number; filename: string; kind2: string; occurredAt: string }
   | { kind: "run"; seq: number; sub: string; detail: string; occurredAt: string }
   | { kind: "auth"; seq: number; status: string; summary: string; occurredAt: string }
   | { kind: "context"; seq: number; source: string; content: string; occurredAt: string }
-  | { kind: "notice"; seq: number; level: "warning" | "error"; message: string; occurredAt: string };
+  | { kind: "notice"; seq: number; level: "warning" | "error"; message: string; occurredAt: string }
+  | { kind: "stall"; seq: number; calls: number; seconds: number; occurredAt: string; endedAt: string };
 
 export type AgentSegmentItem = Extract<TimelineItem, { kind: "agent-segment" }>;
 

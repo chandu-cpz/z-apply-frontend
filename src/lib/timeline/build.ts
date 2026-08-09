@@ -83,6 +83,46 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
   const pendingUsage = new Map<string, { inputTokens: number; outputTokens: number; tokPerSecond: number; calls: number; durationMs: number }>();
   const parentByLabel = new Map<string, string | undefined>();
 
+  // Stall detection: many consecutive model calls with NO progress (no completed
+  // turn, no tool, no browser/human/submission activity) means the agent spun
+  // in place — render it as one visible "stalled" line instead of a silent gap.
+  const PROGRESS_TYPES = new Set([
+    "agent.turn.completed",
+    "tool.started",
+    "tool.completed",
+    "tool.failed",
+    "human.requested",
+    "human.resolved",
+    "human.cancelled",
+    "submission.approval_requested",
+    "submission.approved",
+    "submission.rejected",
+  ]);
+  let stallCalls = 0;
+  let stallStart: { seq: number; occurredAt: string } | null = null;
+  let stallLastAt = "";
+  const flushStall = () => {
+    if (stallStart !== null && stallCalls >= 12) {
+      const seconds = Math.max(0, Math.round((Date.parse(stallLastAt) - Date.parse(stallStart.occurredAt)) / 1000));
+      items.push({
+        kind: "stall",
+        seq: stallStart.seq,
+        calls: stallCalls,
+        seconds,
+        occurredAt: stallStart.occurredAt,
+        endedAt: stallLastAt || stallStart.occurredAt,
+      });
+    }
+    stallCalls = 0;
+    stallStart = null;
+    stallLastAt = "";
+  };
+  const noteModelCall = (seq: number, occurredAt: string) => {
+    if (stallStart === null) stallStart = { seq, occurredAt };
+    stallCalls += 1;
+    stallLastAt = occurredAt;
+  };
+
   const modelFor = (agent: string): string | undefined => modelByAgent.get(agent) || runModel;
 
   for (const event of events) {
@@ -92,6 +132,13 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
     const seq = event.sequence;
     const occurredAt = event.occurred_at;
     if (type === "graph.event") continue;
+
+    if (PROGRESS_TYPES.has(type)) flushStall();
+
+    if (type === "model.call_completed" || type === "model.call.metrics") {
+      noteModelCall(seq, occurredAt);
+      continue;
+    }
 
     if (type === "model.usage") {
       const usageAgent = str(payload.agent) || agent;
@@ -257,7 +304,20 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
       const detail = type === "human.requested"
         ? str(payload.question)
         : str(payload.answer) ? `answered: ${str(payload.answer)}` : str(payload.responder) ? `resolved via ${str(payload.responder)}` : sub;
-      items.push({ kind: "human", seq, sub, detail: detail.slice(0, 200), occurredAt });
+      items.push({
+        kind: "human",
+        seq,
+        sub,
+        detail: detail.slice(0, 200),
+        occurredAt,
+        ...(type === "human.requested"
+          ? {
+              request_id: str(payload.request_id),
+              options: Array.isArray(payload.options) ? payload.options.map(String) : [],
+              allow_free_text: Boolean(payload.allow_free_text),
+            }
+          : {}),
+      });
       continue;
     }
 

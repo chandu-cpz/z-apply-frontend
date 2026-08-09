@@ -221,13 +221,25 @@ function ModelLine({ entry }: { entry: ModelEntry }) {
   );
 }
 
-/** HITL checkpoint as a conversational exchange: the agent's question appears
- * like an assistant message and the user's answer as a right-aligned user
- * bubble — the Claude/ChatGPT pattern that makes checkpoints feel like part
- * of the thread, not a separate log. */
-export function HumanHandoffCard({ item }: { item: Extract<TimelineItem, { kind: "human" }> }) {
+/** HITL checkpoint, fully interactive in the web UI:
+ * - answered: a conversational exchange (assistant asks, user bubble answers)
+ * - pending: MCQ options render as clickable buttons, free-text as an inline
+ *   input — both answer through the API via onAnswer(request_id, value). */
+export function HumanHandoffCard({ item, onAnswer }: { item: Extract<TimelineItem, { kind: "human" }>; onAnswer?: (requestId: string, answer: string) => void }) {
   const question = item.question || item.detail || "The agent needs your input";
   const answer = item.answer;
+  const options = item.options?.length ? item.options : [];
+  const requestId = item.request_id;
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
+  const answerable = Boolean(requestId && onAnswer && !answer);
+
+  const submit = (value: string) => {
+    if (!requestId || !onAnswer || !value.trim() || sending) return;
+    setSending(true);
+    onAnswer(requestId, value.trim());
+  };
+
   return (
     <div className="mb-4">
       <div className="flex items-start gap-2.5">
@@ -236,22 +248,58 @@ export function HumanHandoffCard({ item }: { item: Extract<TimelineItem, { kind:
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[13px] leading-relaxed text-zinc-800 dark:text-zinc-200">{question}</p>
-          <time className="mt-0.5 block text-[10.5px] tabular-nums text-zinc-400 dark:text-zinc-500">
-            {fmtTime(item.occurredAt)}
-          </time>
+          <time className="mt-0.5 block text-[10.5px] tabular-nums text-zinc-400 dark:text-zinc-500">{fmtTime(item.occurredAt)}</time>
         </div>
       </div>
+
       {answer ? (
         <div className="mt-2 flex justify-end pl-10">
           <div className="max-w-[80%]">
             <p className="mb-0.5 pr-1 text-right text-[10.5px] font-medium text-zinc-400 dark:text-zinc-500">You</p>
-            <div className="rounded-2xl rounded-br-md bg-zinc-900 px-3.5 py-2 text-[13px] leading-relaxed text-white dark:bg-zinc-100 dark:text-zinc-900">
-              {answer}
-            </div>
-            <p className="mt-0.5 pr-1 text-right text-[10.5px] tabular-nums text-zinc-400 dark:text-zinc-500">
-              {item.resolvedAt ? fmtTime(item.resolvedAt) : ""}
-            </p>
+            <div className="rounded-2xl rounded-br-md bg-zinc-900 px-3.5 py-2 text-[13px] leading-relaxed text-white dark:bg-zinc-100 dark:text-zinc-900">{answer}</div>
+            <p className="mt-0.5 pr-1 text-right text-[10.5px] tabular-nums text-zinc-400 dark:text-zinc-500">{item.resolvedAt ? fmtTime(item.resolvedAt) : ""}</p>
           </div>
+        </div>
+      ) : answerable ? (
+        <div className="mt-2.5 pl-9">
+          {options.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {options.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  disabled={sending}
+                  onClick={() => submit(option)}
+                  className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-[12.5px] text-zinc-700 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-violet-800 dark:hover:bg-violet-950/30 dark:hover:text-violet-300"
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <form
+              className="flex max-w-md gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                submit(draft);
+              }}
+            >
+              <input
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                disabled={sending}
+                placeholder="Type your answer…"
+                className="min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-[12.5px] text-zinc-800 placeholder:text-zinc-400 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:focus:border-violet-800 dark:focus:ring-violet-950"
+              />
+              <button
+                type="submit"
+                disabled={sending || !draft.trim()}
+                className="shrink-0 rounded-lg bg-violet-600 px-3.5 py-1.5 text-[12.5px] font-medium text-white transition hover:bg-violet-700 disabled:opacity-50"
+              >
+                Send
+              </button>
+            </form>
+          )}
         </div>
       ) : (
         <div className="mt-2 flex items-center gap-1.5 pl-9">
@@ -259,6 +307,22 @@ export function HumanHandoffCard({ item }: { item: Extract<TimelineItem, { kind:
           <span className="text-[12px] text-amber-600 dark:text-amber-300">Waiting for your answer…</span>
         </div>
       )}
+    </div>
+  );
+}
+
+/** A visible "the agent spun in place" line: N model calls, no progress. */
+export function StallRow({ item }: { item: Extract<TimelineItem, { kind: "stall" }> }) {
+  const minutes = item.seconds >= 60 ? `${Math.floor(item.seconds / 60)}m ${item.seconds % 60}s` : `${item.seconds}s`;
+  return (
+    <div className="mb-2 flex items-center gap-2 rounded-lg px-2 py-1">
+      <span className="size-1 shrink-0 rounded-full bg-amber-400" />
+      <span className="text-[12px] text-amber-600 dark:text-amber-300">
+        Stalled for {minutes} · {item.calls} model calls without progress
+      </span>
+      <time className="ml-auto shrink-0 text-[10.5px] tabular-nums text-zinc-400 dark:text-zinc-500">
+        {fmtTime(item.occurredAt)} – {fmtTime(item.endedAt)}
+      </time>
     </div>
   );
 }
