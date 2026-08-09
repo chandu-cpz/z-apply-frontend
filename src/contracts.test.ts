@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { applyEvent, parseStreamEvent } from "./hooks";
 import { hrefFor, parseRoute } from "./routes";
 import { humanRequestSchema, liveViewSchema } from "./schemas";
+import { runAttentionLabel } from "./lib/format";
 import type { ActivityEvent } from "./types";
 
 function event(databaseId: number, sequence = databaseId): ActivityEvent {
@@ -47,5 +48,12 @@ describe("frontend transport contracts", () => {
     expect(request.options).toEqual(["0", "30", "60"]);
     expect(request.allow_free_text).toBe(false);
     expect(liveViewSchema.parse({ available: true, websocket_url: "ws://localhost/view", control_mode: "human_control", focused_run_id: "run-1" }).focused_run_id).toBe("run-1");
+  });
+
+  it("builds a safe run-attention label (company > role > hostname)", () => {
+    expect(runAttentionLabel({ company: "Acme", role: null, job_url: "https://acme.com/jobs/1" })).toBe("Acme");
+    expect(runAttentionLabel({ company: null, role: "Engineer", job_url: "https://acme.com/jobs/1" })).toBe("Engineer");
+    expect(runAttentionLabel({ company: null, role: null, job_url: "https://www.workable.com/jobs/x" })).toBe("workable.com");
+    expect(runAttentionLabel({ company: null, role: null, job_url: "not-a-url" })).toBe("Application");
   });
 });

@@ -4,6 +4,7 @@ import { Archive, Bot, BriefcaseBusiness, Command, Gauge, History, Monitor, Moon
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { api } from "./api";
+import { runAttentionLabel } from "./lib/format";
 import { AgentConversation } from "./components/agent-conversation";
 import { AgentsDrawer } from "./components/agents-drawer";
 import { BrowserPanel } from "./components/browser-panel";
@@ -41,8 +42,14 @@ export function App() {
   });
 
   useEffect(() => {
+    // Every run waiting on a human gets a persistent sonner toast (bottom-
+    // right, rich warning) that survives until the run resolves or is
+    // dismissed; clicking "Open run" jumps to that run's chat where the
+    // question/approval can be answered inline.
     const waiting = new Set(
-      (runs.data ?? []).filter((run) => run.status === "waiting_human").map((run) => run.id),
+      (runs.data ?? [])
+        .filter((run) => run.status === "waiting_human" || run.status === "human_control")
+        .map((run) => run.id),
     );
     for (const runId of notifiedRuns.current) {
       if (!waiting.has(runId)) {
@@ -51,14 +58,15 @@ export function App() {
       }
     }
     for (const run of runs.data ?? []) {
-      if (run.status !== "waiting_human" || notifiedRuns.current.has(run.id)) continue;
+      if (run.status !== "waiting_human" && run.status !== "human_control") continue;
+      if (notifiedRuns.current.has(run.id)) continue;
       notifiedRuns.current.add(run.id);
-      toast.warning("Human input required", {
+      toast.warning(`${runAttentionLabel(run)} needs you`, {
         id: `human-${run.id}`,
-        description: `${run.company || run.role || new URL(run.job_url).hostname} is paused safely and needs you.`,
+        description: "The agent is paused safely and waiting for your input in the chat.",
         duration: Infinity,
         action: {
-          label: "Open run",
+          label: "Answer in chat",
           onClick: () => navigate({ name: "run", runId: run.id }),
         },
       });

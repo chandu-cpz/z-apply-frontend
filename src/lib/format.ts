@@ -37,6 +37,19 @@ export function humanAgent(agent: string): string {
   return agent.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+export function hostnameOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace("www.", "");
+  } catch {
+    return "Application";
+  }
+}
+
+/** Short label for a run in a notification: company, else role, else host. */
+export function runAttentionLabel(run: { company?: string | null; role?: string | null; job_url: string }): string {
+  return run.company || run.role || hostnameOf(run.job_url);
+}
+
 export function fmtTime(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
