@@ -25,7 +25,7 @@ export function RowRenderer({ row }: { row: ChatRow }) {  switch (row.kind) {
     case "run-label":
       return <RunLabel label={row.label} startedAt={row.startedAt} status={row.status} />;
     case "recovery":
-      return <RecoveryRow attempt={row.item.attempt} errorType={row.item.errorType} detail={row.item.detail} stage={row.item.stage} occurredAt={row.item.occurredAt} />;
+      return <RecoveryRow attempt={row.item.attempt} errorType={row.item.errorType} detail={row.item.detail} stage={row.item.stage} />;
     case "model-cluster":
       return <ModelClusterRowCard item={row.item} />;
     case "row":

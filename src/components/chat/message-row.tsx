@@ -45,7 +45,7 @@ const RECOVERY_TITLES: Record<string, string> = {
 };
 
 /** Recovery: one quiet amber line, expands to the reason. */
-export function RecoveryRow({ attempt, errorType, detail, stage, occurredAt }: { attempt: number; errorType: string; detail: string; stage: string; occurredAt: string }) {
+export function RecoveryRow({ attempt, errorType, detail, stage }: { attempt: number; errorType: string; detail: string; stage: string }) {
   const [open, setOpen] = useState(false);
   const collapsible = detail.length > 60;
   const title = RECOVERY_TITLES[stage] ?? stage.replaceAll("_", " ");
@@ -70,7 +70,6 @@ export function RecoveryRow({ attempt, errorType, detail, stage, occurredAt }: {
           {attemptLabel && <span className="ml-1 text-[11px] text-amber-400/80 dark:text-amber-300/50">({attemptLabel})</span>}
         </span>
         {collapsible && <ChevronRight size={11} className={cn("shrink-0 text-amber-300 transition-transform", open && "rotate-90")} />}
-        <Meta occurredAt={occurredAt} />
       </button>
       {open && (
         <pre className="mt-1 ml-6 max-h-64 overflow-auto rounded-lg bg-amber-50/70 px-3 py-2 font-mono text-[12px] leading-relaxed whitespace-pre-wrap text-amber-800 dark:bg-amber-950/20 dark:text-amber-200">
@@ -81,7 +80,32 @@ export function RecoveryRow({ attempt, errorType, detail, stage, occurredAt }: {
   );
 }
 
-/** Collapsed system activity: one hairline expandable row. */
+/** Collapsed system activity: one hairline expandable row with a smart label. */
+const ACTIVITY_KIND_LABELS: Record<string, string> = {
+  run: "Run",
+  browser: "Browser",
+  model: "Model",
+  agent: "Agents",
+  auth: "Authentication",
+  submission: "Submission",
+  artifact: "Artifact",
+  notice: "Notice",
+  context: "Context",
+};
+
+function activityLabel(children: ChatRow[]): string {
+  const kinds = new Set<string>();
+  for (const child of children) {
+    if (child.kind === "model-cluster") kinds.add("model");
+    else if (child.kind === "row") kinds.add(child.item.kind);
+  }
+  const names = [...kinds].map((kind) => ACTIVITY_KIND_LABELS[kind] ?? kind);
+  if (names.length === 0) return "Activity";
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} · ${names[1]}`;
+  return `${names[0]} · ${names[1]} · +${names.length - 2}`;
+}
+
 export function ActivityGroup({ group }: { group: Extract<ChatRow, { kind: "activity-group" }> }) {
   const [open, setOpen] = useState(false);
   const count = group.children.length;
@@ -94,9 +118,8 @@ export function ActivityGroup({ group }: { group: Extract<ChatRow, { kind: "acti
         aria-expanded={open}
       >
         <ChevronRight size={11} className={cn("shrink-0 text-zinc-300 transition-transform dark:text-zinc-600", open && "rotate-90")} />
-        <span className="text-[12px] text-zinc-500 dark:text-zinc-400">Activity</span>
+        <span className="text-[12px] text-zinc-500 dark:text-zinc-400">{activityLabel(group.children)}</span>
         <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">{count}</span>
-        <span className="ml-auto text-[11px] tabular-nums text-zinc-400 dark:text-zinc-500">{fmtTime(lastOccurredAt(group.children))}</span>
       </button>
       {open && (
         <div className="mt-0.5 space-y-0.5 border-l border-zinc-100 pl-3 dark:border-zinc-800">
@@ -107,19 +130,6 @@ export function ActivityGroup({ group }: { group: Extract<ChatRow, { kind: "acti
       )}
     </div>
   );
-}
-
-function lastOccurredAt(rows: ChatRow[]): string {
-  for (let index = rows.length - 1; index >= 0; index -= 1) {
-    const row = rows[index];
-    if (row.kind === "row") {
-      const item = row.item;
-      const occurredAt = "item" in item ? item.item.occurredAt : item.occurredAt;
-      if (occurredAt) return occurredAt;
-    }
-    if (row.kind === "model-cluster") return row.item.occurredAt;
-  }
-  return "";
 }
 
 /** Model activity: one whisper line ("Model deepseek-v4-flash"), no card. */
@@ -139,8 +149,6 @@ export function ModelClusterRowCard({ item }: { item: ModelClusterItem }) {
         <span className={cn("text-[12px]", unsettled > 0 ? "text-amber-600 dark:text-amber-400" : "text-zinc-500 dark:text-zinc-400")}>{label}</span>
         {unsettled > 0 && <span className="text-[11px] text-amber-500">({item.failed} failed{item.rotated ? `, ${item.rotated} rotated` : ""})</span>}
         {item.entries.length > 1 && <span className="text-[11px] text-zinc-400 dark:text-zinc-500">{item.entries.length} events</span>}
-        <span className="ml-auto" />
-        <Meta occurredAt={item.occurredAt} />
       </button>
       {open && item.entries.map((entry) => <ModelLine key={entry.seq} entry={entry} />)}
     </div>
@@ -189,7 +197,6 @@ export function SystemRow({ item, compact = false }: { item: TimelineItem; compa
   const label = systemLabel(item);
   const tone = systemTone(item);
   const detail = systemDetail(item);
-  const occurredAt = "item" in item ? item.item.occurredAt : item.occurredAt;
   if (compact) {
     return (
       <div className="flex items-baseline gap-2 py-0.5">
@@ -203,7 +210,6 @@ export function SystemRow({ item, compact = false }: { item: TimelineItem; compa
       <span className={cn("size-1 shrink-0 rounded-full", item.kind === "notice" && item.level === "error" ? "bg-rose-400" : "bg-zinc-300 dark:bg-zinc-600")} />
       <span className={cn("min-w-0 flex-1 truncate text-[12px]", tone)}>{label}</span>
       {detail && <span className="min-w-0 max-w-[40%] truncate text-[12px] text-zinc-400 dark:text-zinc-500">{detail}</span>}
-      <Meta occurredAt={occurredAt} />
     </div>
   );
 }

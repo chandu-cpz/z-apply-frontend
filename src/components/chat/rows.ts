@@ -19,11 +19,13 @@ export type ChatRow =
   | { kind: "row"; item: TimelineItem }
   | { kind: "activity-group"; seq: number; children: ChatRow[] };
 
-/** System events too noisy for a full row: they collapse into an Activity group. */
+/** System events too noisy for a full row: they collapse into an Activity group.
+ * Run lifecycle, browser, model, auth, submission, artifact and notice events
+ * fold; turns, tools, recoveries and HITL handoffs stay visible. */
 export function isQuiet(row: ChatRow): boolean {
   if (row.kind === "model-cluster") return true;
   if (row.kind !== "row") return false;
-  return ["model", "browser", "agent", "context"].includes(row.item.kind);
+  return ["model", "browser", "agent", "context", "run", "auth", "submission", "artifact", "notice"].includes(row.item.kind);
 }
 
 /** Collapse consecutive quiet system rows into one expandable activity group. */
