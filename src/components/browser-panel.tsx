@@ -5,8 +5,23 @@ import { NoVncCanvas } from "./no-vnc-canvas";
 
 interface Props { run: Run; live?: LiveView; returning?: boolean; busy?: boolean; onFocus(): void; onControl(): void; onReturn(): void; onClose(): void; }
 
+/** The backend builds the WS URL from the request Host, but the Vite proxy rewrites Host to 127.0.0.1:8000,
+ *  so remote clients (e.g. phone on Tailscale) receive a URL pointing at themselves. Rebuild it against the
+ *  page origin; Vite forwards /api including WebSockets to the backend. */
+function reachableWsUrl(raw?: string): string | undefined {
+  if (!raw) return undefined;
+  try {
+    const url = new URL(raw);
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    return `${protocol}://${window.location.host}${url.pathname}${url.search}`;
+  } catch {
+    return undefined;
+  }
+}
+
 export function BrowserPanel({ run, live, returning = false, busy = false, onFocus, onControl, onReturn, onClose }: Props) {
   const human = live?.control_mode === "human_control" && live.focused_run_id === run.id && !returning;
+  const websocketUrl = reachableWsUrl(live?.websocket_url);
   const anotherRunControlled = live?.control_mode === "human_control" && live.focused_run_id !== run.id;
   const focused = live?.focused_run_id === run.id;
   const canControl = run.status !== "terminal" && run.browser_tab_state === "open" && Boolean(live?.available);
@@ -20,7 +35,7 @@ export function BrowserPanel({ run, live, returning = false, busy = false, onFoc
       </header>
       {human && <div className="flex items-center gap-2 bg-amber-100 px-4 py-2 text-xs text-amber-900 dark:bg-amber-950/50 dark:text-amber-200"><MousePointer2 size={14} /> You have browser control. Agent actions are paused.</div>}
       {anotherRunControlled && <div className="bg-violet-100 px-4 py-2 text-xs text-violet-900 dark:bg-violet-950/50 dark:text-violet-200">Another application currently owns human control.</div>}
-      <GlowFrame><div className={`grid h-full min-h-0 flex-1 place-items-center ${live?.websocket_url ? "bg-slate-950" : "bg-stone-50 dark:bg-zinc-950"}`}>{live?.websocket_url ? <NoVncCanvas websocketUrl={live.websocket_url} viewOnly={!human} /> : <BrowserEmpty run={run} human={human} />}</div></GlowFrame>
+      <GlowFrame><div className={`grid h-full min-h-0 flex-1 place-items-center ${websocketUrl ? "bg-slate-950" : "bg-stone-50 dark:bg-zinc-950"}`}>{websocketUrl ? <NoVncCanvas websocketUrl={websocketUrl} viewOnly={!human} /> : <BrowserEmpty run={run} human={human} />}</div></GlowFrame>
       <footer className="flex items-center justify-between border-t border-stone-200 px-4 py-3 dark:border-zinc-800"><span className="text-xs text-stone-500 dark:text-zinc-500">{human ? "Interactive session" : focused ? "Viewing this run" : canControl ? "Focus required" : "No active browser"}</span>{human ? <button disabled={busy} className="rounded-md bg-violet-600 px-3 py-2 text-xs font-medium text-white hover:bg-violet-500 disabled:opacity-50" onClick={onReturn}>Return to agent</button> : canControl && !anotherRunControlled && <button disabled={busy} className="flex items-center gap-1.5 rounded-md bg-violet-600 px-3 py-2 text-xs font-medium text-white hover:bg-violet-500 disabled:opacity-50" onClick={onControl}><MousePointer2 size={14} /> Take control</button>}</footer>
       {!human && <div className="flex items-center justify-center gap-1.5 border-t border-stone-200 bg-stone-50 py-2 font-mono text-[10px] text-stone-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-600"><LockKeyhole size={12} /> View-only until you take control</div>}
     </section>

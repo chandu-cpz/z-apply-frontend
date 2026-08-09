@@ -1,7 +1,7 @@
 import type { PropsWithChildren, ReactNode } from "react";
 
 export function PageShell({ eyebrow, title, description, action, children }: PropsWithChildren<{ eyebrow: string; title: string; description: string; action?: ReactNode }>) {
-  return <main className="mx-auto max-w-7xl px-5 py-8"><header className="mb-7 flex items-end justify-between gap-6 border-b border-stone-200 pb-5 dark:border-zinc-800"><div><p className="font-mono text-[10px] tracking-[.16em] text-violet-600 dark:text-violet-300">{eyebrow}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight">{title}</h1><p className="mt-2 max-w-2xl text-sm leading-relaxed text-stone-500 dark:text-zinc-400">{description}</p></div>{action}</header>{children}</main>;
+  return <main className="mx-auto max-w-7xl px-4 py-6 sm:px-5 sm:py-8"><header className="mb-6 flex flex-col gap-4 border-b border-stone-200 pb-5 sm:mb-7 sm:flex-row sm:items-end sm:justify-between sm:gap-6 dark:border-zinc-800"><div className="min-w-0"><p className="font-mono text-[10px] tracking-[.16em] text-violet-600 dark:text-violet-300">{eyebrow}</p><h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1><p className="mt-2 max-w-2xl text-sm leading-relaxed text-stone-500 dark:text-zinc-400">{description}</p></div>{action && <div className="shrink-0">{action}</div>}</header>{children}</main>;
 }
 
 export function DataCard({ label, value, detail }: { label: string; value: ReactNode; detail?: string }) {
