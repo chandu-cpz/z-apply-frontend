@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { api } from "./api";
 import { AgentConversation } from "./components/agent-conversation";
+import { AgentsDrawer } from "./components/agents-drawer";
 import { BrowserPanel } from "./components/browser-panel";
 import { HumanPanel } from "./components/human-panel";
 import { RunContext } from "./components/run-context";
@@ -105,6 +106,8 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
   const rightPanel = usePanelRef();
   const [returningControl, setReturningControl] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<"activity" | "browser" | "run">("activity");
+  const [subagentsOpen, setSubagentsOpen] = useState(false);
+  const [respondingIds, setRespondingIds] = useState<Set<string>>(new Set());
   const desktop = useDesktopWorkspace();
   const layout = useDefaultLayout({ id: "z-apply-workspace-v4", storage: localStorage });
   const events = useQuery({ queryKey: ["events", run.id], queryFn: () => api.events(run.id), refetchInterval: 5_000 });
@@ -118,17 +121,28 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
     onSuccess: () => { refresh(); toast.success("Response delivered to Core"); },
     onError: (error) => toast.error("Response was not accepted", { description: error.message }),
   });
+  const submitResponse = (request: HumanRequest, answer?: string, decision?: "approve" | "reject") => {
+    setRespondingIds((prev) => new Set(prev).add(request.request_id));
+    respond.mutate({ request, answer, decision }, {
+      onSettled: () => setRespondingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(request.request_id);
+        return next;
+      }),
+    });
+  };
   const pendingRequests = (human.data ?? []).filter((item) => item.status === "pending");
   const humanControl = live.data?.control_mode === "human_control" && live.data.focused_run_id === run.id;
   const openRun = (nextRun: Run) => { onSelect(nextRun); if (nextRun.status !== "terminal") action.mutate(() => api.focus(nextRun.id)); };
 
   const browser = <BrowserPanel run={run} live={live.data} busy={action.isPending} returning={returningControl} onFocus={() => action.mutate(() => api.focus(run.id))} onControl={() => action.mutate(async () => { await api.focus(run.id); return api.takeControl(run.id); })} onReturn={() => { setReturningControl(true); action.mutate(() => api.returnControl(run.id), { onSuccess: () => setReturningControl(false), onError: () => setReturningControl(false) }); }} onClose={() => action.mutate(() => api.closeBrowser(run.id))}/>;
   const sendContext = (content: string) => action.mutate(() => api.sendContext(run.id, content), { onSuccess: () => toast.success("Steering context delivered to the active agent") });
-  const context = <RunContext run={run} onCancel={() => action.mutate(() => api.cancel(run.id))}/>;
+  const context = <RunContext run={run} onCancel={() => action.mutate(() => api.cancel(run.id))} onOpenSubagents={() => setSubagentsOpen(true)}/>;
   const conversation = <AgentConversation run={run} events={events.data ?? []} pendingRequests={pendingRequests} busy={action.isPending} onSendContext={sendContext}/>;
-  const humanPanels = pendingRequests.map((request) => <HumanPanel key={request.request_id} run={run} request={request} busy={respond.isPending} onAnswer={(answer) => respond.mutate({ request, answer })} onDecision={(decision) => respond.mutate({ request, decision })}/>);
+  const humanPanels = pendingRequests.map((request) => <HumanPanel key={request.request_id} run={run} request={request} busy={respondingIds.has(request.request_id)} onAnswer={(answer) => submitResponse(request, answer)} onDecision={(decision) => submitResponse(request, undefined, decision)}/>);
+  const subagents = subagentsOpen ? <AgentsDrawer runId={run.id} events={events.data ?? []} onClose={() => setSubagentsOpen(false)} /> : null;
 
-  if (!desktop) return <main className="grid h-[calc(100dvh_-_3.75rem)] min-h-0 grid-rows-[minmax(0,1fr)_3.5rem] overflow-hidden bg-stone-100 dark:bg-zinc-950"><div className="min-h-0 overflow-hidden">{mobilePanel === "activity" && conversation}{mobilePanel === "browser" && <aside className="flex h-full min-h-0 flex-col gap-2 overflow-y-auto p-2">{humanPanels}{browser}</aside>}{mobilePanel === "run" && <div className="h-full overflow-hidden">{context}</div>}</div><nav className="grid grid-cols-3 border-t border-stone-200 bg-white p-1.5 dark:border-zinc-800 dark:bg-zinc-950" aria-label="Run workspace"><MobileTab active={mobilePanel === "activity"} label="Activity" icon={<Bot size={16}/>} onClick={() => setMobilePanel("activity")}/><MobileTab active={mobilePanel === "browser"} label="Browser" icon={<Monitor size={16}/>} attention={pendingRequests.length > 0} onClick={() => setMobilePanel("browser")}/><MobileTab active={mobilePanel === "run"} label="Run" icon={<BriefcaseBusiness size={16}/>} onClick={() => setMobilePanel("run")}/></nav></main>;
+  if (!desktop) return <main className="grid h-[calc(100dvh_-_3.75rem)] min-h-0 grid-rows-[minmax(0,1fr)_3.5rem] overflow-hidden bg-stone-100 dark:bg-zinc-950"><div className="min-h-0 overflow-hidden">{mobilePanel === "activity" && conversation}{mobilePanel === "browser" && <aside className="flex h-full min-h-0 flex-col gap-2 overflow-y-auto p-2">{humanPanels}{browser}</aside>}{mobilePanel === "run" && <div className="h-full overflow-hidden">{context}</div>}</div><nav className="grid grid-cols-3 border-t border-stone-200 bg-white p-1.5 dark:border-zinc-800 dark:bg-zinc-950" aria-label="Run workspace"><MobileTab active={mobilePanel === "activity"} label="Activity" icon={<Bot size={16}/>} onClick={() => setMobilePanel("activity")}/><MobileTab active={mobilePanel === "browser"} label="Browser" icon={<Monitor size={16}/>} attention={pendingRequests.length > 0} onClick={() => setMobilePanel("browser")}/><MobileTab active={mobilePanel === "run"} label="Run" icon={<BriefcaseBusiness size={16}/>} onClick={() => setMobilePanel("run")}/></nav>{subagents}</main>;
 
   return <main className="h-[calc(100dvh_-_3.75rem)] min-h-0"><Group orientation="horizontal" className="h-full overflow-hidden" defaultLayout={layout.defaultLayout} onLayoutChanged={layout.onLayoutChanged}>
     <Panel id="context" panelRef={leftPanel} defaultSize={18} minSize={15} collapsible collapsedSize={0}><div className="flex h-full min-w-0 flex-col"><RunRail runs={runs} selected={run.id} onNew={onNew} onSelect={openRun} onCollapse={() => leftPanel.current?.collapse()}/>{context}</div></Panel>
@@ -136,7 +150,7 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
     <Panel id="activity" defaultSize={34} minSize={25}>{conversation}</Panel>
     <ResizeHandle/>
     <Panel id="workspace" panelRef={rightPanel} defaultSize={48} minSize={30} collapsible collapsedSize={0}><aside className="flex h-full min-w-0 flex-col gap-2 overflow-y-auto bg-stone-100 p-2 dark:bg-zinc-950">{humanPanels}{browser}</aside></Panel>
-  </Group>{!humanControl && <div className="fixed right-4 bottom-4 z-20 hidden gap-2 lg:flex"><PanelToggle label="Runs" onClick={() => leftPanel.current?.isCollapsed() ? leftPanel.current.expand() : leftPanel.current?.collapse()} icon={<PanelLeftClose size={15}/>}/><PanelToggle label="Browser" onClick={() => rightPanel.current?.isCollapsed() ? rightPanel.current.expand() : rightPanel.current?.collapse()} icon={<PanelRightClose size={15}/>}/></div>}</main>;
+  </Group>{!humanControl && <div className="fixed right-4 bottom-4 z-20 hidden gap-2 lg:flex"><PanelToggle label="Runs" onClick={() => leftPanel.current?.isCollapsed() ? leftPanel.current.expand() : leftPanel.current?.collapse()} icon={<PanelLeftClose size={15}/>}/><PanelToggle label="Browser" onClick={() => rightPanel.current?.isCollapsed() ? rightPanel.current.expand() : rightPanel.current?.collapse()} icon={<PanelRightClose size={15}/>}/></div>}{subagents}</main>;
 }
 
 const desktopMedia = window.matchMedia("(min-width: 768px)");

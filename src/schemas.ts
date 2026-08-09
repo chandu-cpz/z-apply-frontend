@@ -39,6 +39,10 @@ export const activityEventSchema = z.object({
   payload: z.record(z.string(), z.unknown()),
 });
 
+export const liveActivityEventSchema = activityEventSchema.extend({
+  database_id: z.number().optional(),
+});
+
 export const humanRequestSchema = z.object({
   request_id: z.string(),
   run_id: z.string().optional(),

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ActivityEvent } from "./types";
 import {
   activityEventSchema,
   artifactSchema,
@@ -29,7 +30,17 @@ const acknowledgementSchema = z.record(z.string(), z.unknown());
 export const api = {
   runs: () => request("/api/v1/runs", z.array(runSchema)),
   run: (id: string) => request(`/api/v1/runs/${id}`, runSchema),
-  events: (id: string) => request(`/api/v1/runs/${id}/events`, z.array(activityEventSchema)),
+  events: async (id: string) => {
+    const all: ActivityEvent[] = [];
+    let after = 0;
+    for (;;) {
+      const page = await request(`/api/v1/runs/${id}/events?after=${after}&limit=500`, z.array(activityEventSchema));
+      all.push(...page);
+      if (page.length < 500) break;
+      after = page[page.length - 1].database_id;
+    }
+    return all;
+  },
   human: (id: string) => request(`/api/v1/runs/${id}/human-requests`, z.array(humanRequestSchema)),
   artifacts: (id: string) => request(`/api/v1/runs/${id}/artifacts`, z.array(artifactSchema)),
   liveView: () => request("/api/v1/browser/live-view", liveViewSchema),

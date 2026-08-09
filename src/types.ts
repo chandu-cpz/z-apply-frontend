@@ -5,6 +5,7 @@ import type {
   diagnosticsSchema,
   documentSchema,
   humanRequestSchema,
+  liveActivityEventSchema,
   liveViewSchema,
   profileSchema,
   runSchema,
@@ -15,6 +16,7 @@ import type {
 export type RunStatus = z.infer<typeof runStatusSchema>;
 export type Run = z.infer<typeof runSchema>;
 export type ActivityEvent = z.infer<typeof activityEventSchema>;
+export type LiveActivityEvent = z.infer<typeof liveActivityEventSchema>;
 export type HumanRequest = z.infer<typeof humanRequestSchema>;
 export type LiveView = z.infer<typeof liveViewSchema>;
 export type Artifact = z.infer<typeof artifactSchema>;
