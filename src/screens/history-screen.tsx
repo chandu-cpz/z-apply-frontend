@@ -87,7 +87,7 @@ export function HistoryScreen({ runs, onOpen }: { runs: Run[]; onOpen(run: Run):
                   style={{ height: `${row.size}px`, transform: `translateY(${row.start - scrollMargin}px)` }}
                   onClick={() => onOpen(run)}
                 >
-                  <td className="max-w-0 px-4 py-3">
+                  <td className="w-2/5 max-w-[360px] px-4 py-3">
                     <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100" title={run.job_url}>{run.company || hostname(run.job_url)}</p>
                     <p className="mt-0.5 truncate text-xs text-zinc-400 dark:text-zinc-500" title={run.role ? run.role : run.job_url}>{run.role || hostname(run.job_url)}</p>
                   </td>
