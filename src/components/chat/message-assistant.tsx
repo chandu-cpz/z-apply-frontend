@@ -155,9 +155,9 @@ export function TurnMessage({ item }: { item: TurnItem }) {
         {hasProse && <AssistantText text={item.text} streaming={false} />}
         {item.toolCalls.length > 0 && (
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            {item.toolCalls.map((tool, index) => (
+            {item.toolCalls.filter((tool) => tool.name).map((tool, index) => (
               <span key={`${tool.id || tool.name || index}`} className="rounded-full bg-zinc-100 px-2 py-0.5 font-mono text-[11px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                {tool.name || "tool"}
+                {tool.name}
               </span>
             ))}
           </div>
@@ -220,9 +220,9 @@ export const LiveAssistant = memo(function LiveAssistant({ agent }: { agent: Liv
         <ThinkingStrip reasoning={agent.reasoning} streaming={streaming} durationMs={agent.metrics?.durationMs} />
         {tools.length > 0 && (
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
-            {tools.map((tool) => (
+            {tools.filter((tool) => tool.name).map((tool) => (
               <span key={`${tool.index}-${tool.id}`} className="rounded-full bg-zinc-100 px-2 py-0.5 font-mono text-[11px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                {tool.name || `tool ${tool.index}`}
+                {tool.name}
               </span>
             ))}
           </div>
