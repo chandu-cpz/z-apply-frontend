@@ -26,9 +26,9 @@ export type ChatRow =
 export function isQuiet(row: ChatRow): boolean {
   if (row.kind === "model-cluster") return true;
   if (row.kind !== "row") return false;
-  // HITL handoff cards AND pending (unanswered) requests stay visible and
-  // interactive; only resolved/cancelled human events fold away.
-  if (row.item.kind === "human" && (row.item.sub === "handoff" || row.item.sub === "requested")) return false;
+  // HITL handoff cards, pending requests AND cancelled cards stay visible;
+  // only resolved/cancelled system rows fold away.
+  if (row.item.kind === "human" && (row.item.sub === "handoff" || row.item.sub === "requested" || row.item.sub === "cancelled")) return false;
   return [
     "model",
     "browser",

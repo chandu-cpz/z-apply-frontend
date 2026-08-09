@@ -228,11 +228,12 @@ function ModelLine({ entry }: { entry: ModelEntry }) {
 export function HumanHandoffCard({ item, onAnswer }: { item: Extract<TimelineItem, { kind: "human" }>; onAnswer?: (requestId: string, answer: string) => void }) {
   const question = item.question || item.detail || "The agent needs your input";
   const answer = item.answer;
+  const cancelled = item.sub === "cancelled";
   const options = item.options?.length ? item.options : [];
   const requestId = item.request_id;
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
-  const answerable = Boolean(requestId && onAnswer && !answer);
+  const answerable = Boolean(requestId && onAnswer && !answer && !cancelled);
 
   const submit = (value: string) => {
     if (!requestId || !onAnswer || !value.trim() || sending) return;
@@ -243,16 +244,27 @@ export function HumanHandoffCard({ item, onAnswer }: { item: Extract<TimelineIte
   return (
     <div className="mb-4">
       <div className="flex items-start gap-2.5">
-        <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-lg bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300">
+        <span
+          className={cn(
+            "mt-0.5 grid size-6 shrink-0 place-items-center rounded-lg",
+            cancelled
+              ? "bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500"
+              : "bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300",
+          )}
+        >
           <HelpCircle size={12} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] leading-relaxed text-zinc-800 dark:text-zinc-200">{question}</p>
+          <p className={cn("text-[13px] leading-relaxed", cancelled ? "text-zinc-500 dark:text-zinc-400" : "text-zinc-800 dark:text-zinc-200")}>
+            {question}
+          </p>
           <time className="mt-0.5 block text-[10.5px] tabular-nums text-zinc-400 dark:text-zinc-500">{fmtTime(item.occurredAt)}</time>
         </div>
       </div>
 
-      {answer ? (
+      {cancelled ? (
+        <p className="mt-2 pl-9 text-[11.5px] text-zinc-400 dark:text-zinc-500">Cancelled — the run ended before this was answered.</p>
+      ) : answer ? (
         <div className="mt-2 flex justify-end pl-10">
           <div className="max-w-[80%]">
             <p className="mb-0.5 pr-1 text-right text-[10.5px] font-medium text-zinc-400 dark:text-zinc-500">You</p>

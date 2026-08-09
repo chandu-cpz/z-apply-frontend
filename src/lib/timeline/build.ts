@@ -359,10 +359,10 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
     items.push({ kind: "tool", item: tool });
   }
   const sorted = items.sort((left, right) => ("item" in left ? left.item.seq : left.seq) - ("item" in right ? right.item.seq : right.seq));
-  // Pair each human.requested with the NEXT human.resolved regardless of
-  // interleaved events (turns/tools/model events between them must not break
-  // the pairing). The result is one handoff card (question + your answer)
-  // rendered inline like a tool call, not two bare system rows.
+  // Pair each human.requested with the NEXT human.resolved (handoff card) or,
+  // when the run ended first, the next human.cancelled (cancelled card with the
+  // question, no answer). Interleaved events (turns/tools/models) never break
+  // the pairing, so checkpoints render inline like tool calls.
   const sortedHumanPaired: TimelineItem[] = [];
   const pairedIndexes = new Set<number>();
   for (let index = 0; index < sorted.length; index += 1) {
@@ -371,7 +371,7 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
       let resolvedIndex = index + 1;
       while (resolvedIndex < sorted.length) {
         const candidate = sorted[resolvedIndex];
-        if (candidate.kind === "human" && candidate.sub === "resolved") break;
+        if (candidate.kind === "human" && (candidate.sub === "resolved" || candidate.sub === "cancelled")) break;
         resolvedIndex += 1;
       }
       if (resolvedIndex < sorted.length) {
@@ -380,10 +380,10 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
         pairedIndexes.add(resolvedIndex);
         sortedHumanPaired.push({
           ...item,
-          sub: "handoff",
+          sub: resolved.sub === "resolved" ? "handoff" : "cancelled",
           question: item.detail,
-          answer: resolved.detail.replace(/^answered: /, ""),
-          resolvedAt: resolved.occurredAt,
+          answer: resolved.sub === "resolved" ? resolved.detail.replace(/^answered: /, "") : undefined,
+          resolvedAt: resolved.sub === "resolved" ? resolved.occurredAt : undefined,
         });
         continue;
       }

@@ -122,7 +122,7 @@ export function RowRenderer({ row, onAnswer }: { row: ChatRow; onAnswer?: (reque
     case "model-cluster":
       return <ModelClusterRowCard item={row.item} />;
     case "row":
-      if (row.item.kind === "human" && (row.item.sub === "handoff" || row.item.sub === "requested")) {
+      if (row.item.kind === "human" && (row.item.sub === "handoff" || row.item.sub === "requested" || row.item.sub === "cancelled")) {
         return <HumanHandoffCard item={row.item} onAnswer={onAnswer} />;
       }
       if (row.item.kind === "stall") {

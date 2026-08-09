@@ -296,4 +296,18 @@ describe("buildTimeline human pairing", () => {
     expect(humans).toHaveLength(1);
     expect(humans[0].sub).toBe("requested");
   });
+
+  it("pairs a request with a following cancel into a cancelled card (no live buttons)", () => {
+    const events = [
+      ev(1, "human.requested", "core", { question: "Are you mobile?" }),
+      ev(2, "run.cancel_requested", "core", {}),
+      ev(3, "human.cancelled", "core", {}),
+    ];
+    const items = buildTimeline(events);
+    const humans = items.filter((item) => item.kind === "human") as Array<Extract<TimelineItem, { kind: "human" }>>;
+    expect(humans).toHaveLength(1);
+    expect(humans[0].sub).toBe("cancelled");
+    expect(humans[0].question).toBe("Are you mobile?");
+    expect(humans[0].answer).toBeUndefined();
+  });
 });
