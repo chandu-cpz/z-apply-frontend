@@ -82,22 +82,77 @@ export function App() {
 function Header({ active, route, streamStatus, navigate }: { active?: Run; route: Route; streamStatus: string; navigate(route: Route): void }) {
   const theme = useUiStore((state) => state.theme);
   const toggleTheme = useUiStore((state) => state.toggleTheme);
-  return <header className="sticky top-0 z-30 flex h-15 items-center gap-5 border-b border-stone-200 bg-white/95 px-5 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/95">
-    <button className="flex items-center gap-2.5 text-sm font-bold tracking-[.06em]" onClick={() => navigate({ name: "new" })}><span className="grid size-8 place-items-center rounded-lg border border-violet-500/70 bg-violet-600 text-violet-50 shadow-lg shadow-violet-950/30"><Command size={18}/></span><span>Z-APPLY</span></button>
-    <nav className="flex min-w-0 items-center gap-1" aria-label="Primary navigation"><NavButton active={route.name === "new"} label="New" icon={<Plus size={14}/>} onClick={() => navigate({ name: "new" })}/><NavButton active={route.name === "history" || route.name === "run"} label="Runs" icon={<History size={14}/>} onClick={() => navigate({ name: "history" })}/><NavButton active={route.name === "artifacts"} label="Artifacts" icon={<Archive size={14}/>} onClick={() => navigate({ name: "artifacts" })}/><NavButton active={route.name === "diagnostics"} label="Health" icon={<Gauge size={14}/>} onClick={() => navigate({ name: "diagnostics" })}/><NavButton active={route.name === "settings"} label="Settings" icon={<Settings size={14}/>} onClick={() => navigate({ name: "settings" })}/></nav>
-    <div className="ml-auto hidden min-w-0 items-center gap-3 lg:flex">
-      {active && <div className="min-w-0 border-l border-stone-200 pl-3 dark:border-zinc-800"><div className="flex min-w-0 items-center gap-2"><b className="max-w-40 truncate text-xs text-stone-800 dark:text-zinc-200">{active.company || active.role || "Application"}</b><StatusPill run={active}/><RunClock run={active}/></div><p className="mt-0.5 max-w-80 truncate text-[11px] text-stone-400">{active.phase.replaceAll("_", " ")} · {active.current_agent?.replaceAll("_", " ") || "starting"} · {active.current_model || "selecting model"}</p></div>}
-      <div className="flex items-center gap-1.5 text-[11px] text-stone-500"><span className={`size-1.5 rounded-full ${streamStatus === "connected" ? "bg-emerald-400" : "bg-amber-400"}`}/>{streamStatus}</div>
-    </div>
-    <button className="grid size-8 place-items-center rounded-md text-stone-500 hover:bg-stone-100 dark:hover:bg-zinc-800" onClick={toggleTheme} title="Toggle color theme">{theme === "light" ? <Moon size={15}/> : <Sun size={15}/>}</button>
-  </header>;
+  return (
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-1 border-b border-zinc-200 bg-white/90 px-4 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/90">
+      <button className="flex shrink-0 items-center gap-2 pr-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100" onClick={() => navigate({ name: "new" })}>
+        <span className="grid size-7 place-items-center rounded-lg bg-violet-600 text-white shadow-sm shadow-violet-950/30"><Command size={15} /></span>
+        <span>Z-Apply</span>
+      </button>
+      <nav className="flex min-w-0 items-center gap-0.5" aria-label="Primary navigation">
+        <NavButton active={route.name === "new"} label="New" icon={<Plus size={14} />} onClick={() => navigate({ name: "new" })} />
+        <NavButton active={route.name === "history" || route.name === "run"} label="Runs" icon={<History size={14} />} onClick={() => navigate({ name: "history" })} />
+        <NavButton active={route.name === "artifacts"} label="Artifacts" icon={<Archive size={14} />} onClick={() => navigate({ name: "artifacts" })} />
+        <NavButton active={route.name === "diagnostics"} label="Health" icon={<Gauge size={14} />} onClick={() => navigate({ name: "diagnostics" })} />
+        <NavButton active={route.name === "settings"} label="Settings" icon={<Settings size={14} />} onClick={() => navigate({ name: "settings" })} />
+      </nav>
+      <div className="ml-auto flex min-w-0 items-center gap-2.5">
+        {active && <ActiveRunChip run={active} />}
+        <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400" title="Live event stream">
+          <span className={`size-1.5 rounded-full ${streamStatus === "connected" ? "bg-emerald-400" : "bg-amber-400"}`} />
+          <span className="hidden sm:inline">{streamStatus}</span>
+        </span>
+        <button className="grid size-8 shrink-0 place-items-center rounded-md text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={toggleTheme} title="Toggle color theme">
+          {theme === "light" ? <Moon size={15} /> : <Sun size={15} />}
+        </button>
+      </div>
+    </header>
+  );
 }
 
-function StatusPill({ run }: { run: Run }) { const label = run.status === "waiting_human" ? "needs you" : run.status.replaceAll("_", " "); const tone = run.status === "waiting_human" ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200" : run.status === "terminal" ? "bg-stone-200 text-stone-600 dark:bg-zinc-800 dark:text-zinc-300" : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"; return <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${tone}`}>{label}</span>; }
+/** The active run as one compact chip — no clock, no phase micro-labels. */
+function ActiveRunChip({ run }: { run: Run }) {
+  const submitted = run.outcome === "submitted_verified";
+  const failed = run.status === "terminal" && !submitted && run.outcome !== "cancelled";
+  const waiting = run.status === "waiting_human" || run.status === "human_control";
+  const running = run.status === "running" || run.status === "starting";
+  const dot = submitted
+    ? "bg-emerald-400"
+    : failed
+      ? "bg-rose-400"
+      : waiting
+        ? "bg-amber-400 animate-pulse"
+        : running
+          ? "bg-violet-500 animate-pulse"
+          : "bg-zinc-400";
+  const label = waiting ? "needs you" : submitted ? "submitted" : failed ? "failed" : running ? "running" : "finished";
+  return (
+    <span className="hidden max-w-64 min-w-0 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 lg:flex dark:border-zinc-800 dark:bg-zinc-900">
+      <span className={`size-1.5 shrink-0 rounded-full ${dot}`} />
+      <span className="truncate text-[11.5px] font-medium text-zinc-700 dark:text-zinc-300">{run.company || hostname(run.job_url)}</span>
+      <span className="shrink-0 text-[10.5px] text-zinc-400 dark:text-zinc-500">{label}</span>
+    </span>
+  );
+}
 
-function RunClock({ run }: { run: Run }) { const [now, setNow] = useState(() => new Date(run.finished_at || run.started_at || run.created_at).getTime()); useEffect(() => { if (run.status === "terminal") return; const timer = window.setInterval(() => setNow(Date.now()), 1_000); return () => window.clearInterval(timer); }, [run.status]); const start = run.started_at || run.created_at; const end = run.finished_at ? new Date(run.finished_at).getTime() : now; const seconds = Math.max(0, Math.floor((end - new Date(start).getTime()) / 1_000)); return <time className="text-[11px] tabular-nums text-stone-400">{String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}</time>; }
+function hostname(url: string): string {
+  try {
+    return new URL(url).hostname.replace("www.", "");
+  } catch {
+    return "Application";
+  }
+}
 
-function NavButton({ active, label, icon, onClick }: { active: boolean; label: string; icon: React.ReactNode; onClick(): void }) { return <button className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 text-[11px] transition ${active ? "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200" : "text-stone-500 hover:bg-stone-100 dark:text-zinc-400 dark:hover:bg-zinc-900"}`} onClick={onClick}>{icon}<span className="hidden sm:inline">{label}</span></button>; }
+function NavButton({ active, label, icon, onClick }: { active: boolean; label: string; icon: React.ReactNode; onClick(): void }) {
+  return (
+    <button
+      className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12.5px] transition ${active ? "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200" : "text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"}`}
+      onClick={onClick}
+    >
+      {icon}
+      <span className="hidden sm:inline">{label}</span>
+    </button>
+  );
+}
 
 interface CockpitProps { run: Run; runs: Run[]; onNew(): void; onSelect(run: Run): void; }
 

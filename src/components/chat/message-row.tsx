@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronRight, HelpCircle, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { fmtTime, humanAgent } from "@/lib/format";
+import { fmtTime, humanAgent, humanModel } from "@/lib/format";
 import type { ModelClusterItem, ModelEntry, TimelineItem } from "@/lib/timeline/types";
 import type { ChatRow } from "./rows";
 
@@ -80,35 +80,83 @@ export function RecoveryRow({ attempt, errorType, detail, stage }: { attempt: nu
   );
 }
 
-/** Collapsed system activity: one hairline expandable row with a smart label. */
-const ACTIVITY_KIND_LABELS: Record<string, string> = {
-  run: "Run",
-  browser: "Browser",
-  model: "Model",
-  agent: "Agents",
-  auth: "Authentication",
-  submission: "Submission",
-  artifact: "Artifact",
-  notice: "Notice",
-  context: "Context",
-};
-
-function activityLabel(children: ChatRow[]): string {
-  const kinds = new Set<string>();
-  for (const child of children) {
-    if (child.kind === "model-cluster") kinds.add("model");
-    else if (child.kind === "row") kinds.add(child.item.kind);
+/** Collapsed system activity: one hairline row with a human summary and the
+ * time span it covers — e.g. "2 interruptions · Model deepseek-v4-flash · 21:28–21:44". */
+function rowOccurredAt(row: ChatRow): string {
+  switch (row.kind) {
+    case "row":
+      return "item" in row.item ? row.item.item.occurredAt : row.item.occurredAt;
+    case "model-cluster":
+      return row.item.occurredAt;
+    default:
+      return "";
   }
-  const names = [...kinds].map((kind) => ACTIVITY_KIND_LABELS[kind] ?? kind);
-  if (names.length === 0) return "Activity";
-  if (names.length === 1) return names[0];
-  if (names.length === 2) return `${names[0]} · ${names[1]}`;
-  return `${names[0]} · ${names[1]} · +${names.length - 2}`;
+}
+
+function activitySummary(children: ChatRow[]): string {
+  let interruptions = 0;
+  let humanCount = 0;
+  let runEvents = 0;
+  let browserEvents = 0;
+  let modelLabel = "";
+  let authEvents = 0;
+  let noticeEvents = 0;
+  for (const child of children) {
+    if (child.kind === "model-cluster") {
+      modelLabel = humanModel(child.item.lastModel) || modelLabel;
+      continue;
+    }
+    if (child.kind !== "row") continue;
+    const item = child.item;
+    switch (item.kind) {
+      case "recovery":
+        interruptions += 1;
+        break;
+      case "human":
+        humanCount += 1;
+        break;
+      case "run":
+        runEvents += 1;
+        break;
+      case "browser":
+        browserEvents += 1;
+        break;
+      case "model":
+        if (item.model) modelLabel = item.model;
+        break;
+      case "auth":
+        authEvents += 1;
+        break;
+      case "notice":
+        noticeEvents += 1;
+        break;
+      default:
+        break;
+    }
+  }
+  const parts: string[] = [];
+  if (interruptions > 0) parts.push(`${interruptions} interruption${interruptions > 1 ? "s" : ""}`);
+  if (modelLabel) parts.push(`Model ${humanModel(modelLabel)}`);
+  if (humanCount > 0) parts.push(`${humanCount} checkpoint${humanCount > 1 ? "s" : ""}`);
+  if (runEvents > 0) parts.push("run");
+  if (browserEvents > 0) parts.push("browser");
+  if (authEvents > 0) parts.push("auth");
+  if (noticeEvents > 0) parts.push("notice");
+  if (parts.length === 0) return "Activity";
+  return parts.slice(0, 3).join(" · ");
 }
 
 export function ActivityGroup({ group }: { group: Extract<ChatRow, { kind: "activity-group" }> }) {
   const [open, setOpen] = useState(false);
   const count = group.children.length;
+  const firstAt = rowOccurredAt(group.children[0]);
+  const lastAt = rowOccurredAt(group.children[group.children.length - 1]);
+  const span =
+    firstAt && lastAt && firstAt !== lastAt
+      ? `${fmtTime(firstAt)} – ${fmtTime(lastAt)}`
+      : firstAt
+        ? fmtTime(firstAt)
+        : "";
   return (
     <div className="mb-1">
       <button
@@ -118,8 +166,9 @@ export function ActivityGroup({ group }: { group: Extract<ChatRow, { kind: "acti
         aria-expanded={open}
       >
         <ChevronRight size={11} className={cn("shrink-0 text-zinc-300 transition-transform dark:text-zinc-600", open && "rotate-90")} />
-        <span className="text-[12px] text-zinc-500 dark:text-zinc-400">{activityLabel(group.children)}</span>
-        <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">{count}</span>
+        <span className="truncate text-[12px] text-zinc-500 dark:text-zinc-400">{activitySummary(group.children)}</span>
+        <span className="shrink-0 rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">{count}</span>
+        <span className="ml-auto shrink-0 text-[10.5px] tabular-nums text-zinc-400 dark:text-zinc-500">{span}</span>
       </button>
       {open && (
         <div className="mt-0.5 space-y-0.5 border-l border-zinc-100 pl-3 dark:border-zinc-800">
@@ -132,11 +181,12 @@ export function ActivityGroup({ group }: { group: Extract<ChatRow, { kind: "acti
   );
 }
 
-/** Model activity: one whisper line ("Model deepseek-v4-flash"), no card. */
+/** Model activity: one whisper line per event — just the model name (+ failures),
+ * the model is already shown in the message header, so no "selected" verb spam. */
 export function ModelClusterRowCard({ item }: { item: ModelClusterItem }) {
   const [open, setOpen] = useState(false);
   const unsettled = item.failed + item.retrying + item.rateLimited;
-  const label = item.lastModel ? `Model ${humanAgent(item.lastModel)}` : "Model selection";
+  const label = item.lastModel ? `Model ${humanModel(item.lastModel)}` : "Model";
   return (
     <div className="mb-1">
       <button
@@ -146,9 +196,10 @@ export function ModelClusterRowCard({ item }: { item: ModelClusterItem }) {
         aria-expanded={open}
       >
         <ChevronRight size={11} className={cn("shrink-0 text-zinc-300 transition-transform dark:text-zinc-600", open && "rotate-90")} />
-        <span className={cn("text-[12px]", unsettled > 0 ? "text-amber-600 dark:text-amber-400" : "text-zinc-500 dark:text-zinc-400")}>{label}</span>
-        {unsettled > 0 && <span className="text-[11px] text-amber-500">({item.failed} failed{item.rotated ? `, ${item.rotated} rotated` : ""})</span>}
-        {item.entries.length > 1 && <span className="text-[11px] text-zinc-400 dark:text-zinc-500">{item.entries.length} events</span>}
+        <span className={cn("truncate text-[12px]", unsettled > 0 ? "text-amber-600 dark:text-amber-400" : "text-zinc-500 dark:text-zinc-400")}>{label}</span>
+        {unsettled > 0 && <span className="shrink-0 text-[11px] text-amber-500">({item.failed} failed{item.rotated ? `, ${item.rotated} rotated` : ""})</span>}
+        {item.entries.length > 1 && <span className="shrink-0 text-[11px] text-zinc-400 dark:text-zinc-500">{item.entries.length} switches</span>}
+        <span className="ml-auto shrink-0 text-[10.5px] tabular-nums text-zinc-400 dark:text-zinc-500">{fmtTime(item.occurredAt)}</span>
       </button>
       {open && item.entries.map((entry) => <ModelLine key={entry.seq} entry={entry} />)}
     </div>
@@ -156,12 +207,16 @@ export function ModelClusterRowCard({ item }: { item: ModelClusterItem }) {
 }
 
 function ModelLine({ entry }: { entry: ModelEntry }) {
-  const tone = entry.sub === "failed" ? "text-rose-500" : entry.sub === "rotated" ? "text-blue-500" : entry.sub === "retrying" || entry.sub === "rate_limited" ? "text-amber-500" : "text-zinc-500 dark:text-zinc-400";
+  const unsettled = entry.sub === "failed" || entry.sub === "rate_limited" || entry.sub === "retrying";
+  const tone = unsettled ? "text-amber-500" : entry.sub === "rotated" ? "text-blue-500" : "text-zinc-500 dark:text-zinc-400";
   return (
     <div className="ml-5 flex items-baseline gap-2 py-0.5">
-      <span className={cn("text-[11.5px]", tone)}>{entry.sub.replaceAll("_", " ")}</span>
-      <span className="truncate text-[11.5px] text-zinc-600 dark:text-zinc-300">{humanAgent(entry.agent)}</span>
-      <span className="truncate font-mono text-[11px] text-zinc-400 dark:text-zinc-500">{entry.model}</span>
+      <span className={cn("truncate font-mono text-[11.5px]", tone)}>{entry.model}</span>
+      {entry.agent && entry.agent !== "orchestrator" && (
+        <span className="truncate text-[11px] text-zinc-400 dark:text-zinc-500">{humanAgent(entry.agent)}</span>
+      )}
+      {unsettled && <span className="shrink-0 text-[10.5px] text-amber-500">{entry.sub.replaceAll("_", " ")}</span>}
+      <time className="ml-auto shrink-0 text-[10.5px] tabular-nums text-zinc-400 dark:text-zinc-500">{fmtTime(entry.occurredAt)}</time>
     </div>
   );
 }
@@ -192,16 +247,20 @@ export function HumanHandoffCard({ item }: { item: Extract<TimelineItem, { kind:
   );
 }
 
-/** System events (run/browser/artifact/auth/context/notice): one whisper line. */
+/** System events (run/browser/artifact/auth/context/notice): one whisper line.
+ * Timestamps return here — the expanded detail must show that events happened
+ * at different times, only the collapsed summary is time-free. */
 export function SystemRow({ item, compact = false }: { item: TimelineItem; compact?: boolean }) {
   const label = systemLabel(item);
   const tone = systemTone(item);
   const detail = systemDetail(item);
+  const occurredAt = "item" in item ? item.item.occurredAt : item.occurredAt;
   if (compact) {
     return (
       <div className="flex items-baseline gap-2 py-0.5">
         <span className={cn("min-w-0 flex-1 truncate text-[12px]", tone)}>{label}</span>
-        {detail && <span className="min-w-0 flex-1 truncate text-[12px] text-zinc-400 dark:text-zinc-500">{detail}</span>}
+        {detail && <span className="min-w-0 max-w-[45%] truncate text-[12px] text-zinc-400 dark:text-zinc-500">{detail}</span>}
+        <time className="shrink-0 text-[10.5px] tabular-nums text-zinc-400 dark:text-zinc-500">{fmtTime(occurredAt)}</time>
       </div>
     );
   }
@@ -210,6 +269,7 @@ export function SystemRow({ item, compact = false }: { item: TimelineItem; compa
       <span className={cn("size-1 shrink-0 rounded-full", item.kind === "notice" && item.level === "error" ? "bg-rose-400" : "bg-zinc-300 dark:bg-zinc-600")} />
       <span className={cn("min-w-0 flex-1 truncate text-[12px]", tone)}>{label}</span>
       {detail && <span className="min-w-0 max-w-[40%] truncate text-[12px] text-zinc-400 dark:text-zinc-500">{detail}</span>}
+      <time className="shrink-0 text-[10.5px] tabular-nums text-zinc-400 dark:text-zinc-500">{fmtTime(occurredAt)}</time>
     </div>
   );
 }

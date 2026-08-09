@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown } from "lucide-react";
+import { ArrowDown, BriefcaseBusiness } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { mergeLive, turnBoundaries, EMPTY_LIVELY } from "@/lib/live";
 import { buildTimeline } from "@/lib/timeline/build";
@@ -12,6 +12,56 @@ import { ActivityGroup, HumanHandoffCard, ModelClusterRowCard, RecoveryRow, RunL
 import { flattenTimeline, groupRows, isQuiet, rowKey, type ChatRow } from "./rows";
 
 const FOLLOW_THRESHOLD_PX = 80;
+
+function hostname(url: string): string {
+  try {
+    return new URL(url).hostname.replace("www.", "");
+  } catch {
+    return "Application";
+  }
+}
+
+/** Chat header: the run's identity + status. Replaces the "queued/started/phase"
+ * event spam at the top of a run with one calm card. */
+function RunHeader({ run }: { run: Run }) {
+  const submitted = run.outcome === "submitted_verified";
+  const failed = run.status === "terminal" && !submitted && run.outcome !== "cancelled";
+  const running = run.status === "running" || run.status === "starting";
+  const waiting = run.status === "waiting_human" || run.status === "human_control";
+  const chip = submitted
+    ? { label: "submitted", cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" }
+    : failed
+      ? { label: "failed", cls: "bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300" }
+      : waiting
+        ? { label: "needs you", cls: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200" }
+        : running
+          ? { label: "running", cls: "bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300" }
+          : { label: "finished", cls: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300" };
+  const started = new Date(run.started_at || run.created_at);
+  const ended = run.finished_at ? new Date(run.finished_at) : new Date();
+  const seconds = Math.max(0, Math.floor((ended.getTime() - started.getTime()) / 1000));
+  const duration = seconds >= 60 ? `${Math.floor(seconds / 60)}m ${seconds % 60}s` : `${seconds}s`;
+  return (
+    <div className="mb-6 border-b border-zinc-100 pb-5 dark:border-zinc-800/60">
+      <div className="flex items-center gap-2.5">
+        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-violet-100 text-violet-600 dark:bg-violet-950/60 dark:text-violet-300">
+          <BriefcaseBusiness size={15} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">{run.company || hostname(run.job_url)}</p>
+          <p className="truncate text-[11.5px] text-zinc-400 dark:text-zinc-500">{run.role || "Role details loading"}</p>
+        </div>
+        <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-medium", chip.cls)}>{chip.label}</span>
+        <span className="shrink-0 text-[11px] tabular-nums text-zinc-400 dark:text-zinc-500">
+          {run.finished_at ? duration : `${duration} · in progress`}
+        </span>
+      </div>
+      {run.summary && (
+        <p className="mt-3 text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">{run.summary}</p>
+      )}
+    </div>
+  );
+}
 
 export function RowRenderer({ row }: { row: ChatRow }) {  switch (row.kind) {
     case "assistant-live":
@@ -52,14 +102,21 @@ export function MessageList({ runId, events, run }: { runId: string; events: Act
   const boundaries = useMemo(() => turnBoundaries(events), [events]);
   const live = useLiveStore((state) => state.byRun[runId] ?? EMPTY_LIVELY);
   const liveAgents = useMemo<LiveAgent[]>(() => mergeLive(live, boundaries), [live, boundaries]);
-  const rows = useMemo<ChatRow[]>(() => {
+  // Thread = pure conversation; every system/telemetry row is pulled out into
+  // a single "Activity" disclosure rendered under the run header. This is the
+  // Claude/ChatGPT separation of conversation from activity: queued/started/
+  // phase/model/auth/browser/recovery events never pollute the thread.
+  const { rows, activity } = useMemo(() => {
     const flat: ChatRow[] = [];
-    // Completed timeline first (chronological), then the in-flight live
-    // assistants appended at the bottom — the natural reading order for a
-    // chat thread (Claude/ChatGPT append streaming content at the end).
     flattenTimeline(buildTimeline(events), flat);
     for (const agent of liveAgents) flat.push({ kind: "assistant-live", agent });
-    return groupRows(flat);
+    const conversation: ChatRow[] = [];
+    const system: ChatRow[] = [];
+    for (const row of flat) {
+      if (isQuiet(row)) system.push(row);
+      else conversation.push(row);
+    }
+    return { rows: groupRows(conversation), activity: system };
   }, [liveAgents, events]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -89,6 +146,10 @@ export function MessageList({ runId, events, run }: { runId: string; events: Act
     <section className="relative flex h-full min-h-0 flex-col bg-background">
       <div ref={scrollRef} onScroll={onScroll} className="min-h-0 flex-1 overflow-y-auto overscroll-contain" role="log" aria-live="polite">
         <div className="mx-auto w-full max-w-[700px] px-5 py-7">
+          <RunHeader run={run} />
+          {activity.length > 0 && (
+            <ActivityGroup group={{ kind: "activity-group", seq: 0, children: activity }} />
+          )}
           {rows.length === 0 && <EmptyState />}
           {rows.map((row) => (
             <div key={rowKey(row)}>

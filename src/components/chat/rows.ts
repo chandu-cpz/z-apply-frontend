@@ -19,13 +19,28 @@ export type ChatRow =
   | { kind: "row"; item: TimelineItem }
   | { kind: "activity-group"; seq: number; children: ChatRow[] };
 
-/** System events too noisy for a full row: they collapse into an Activity group.
- * Run lifecycle, browser, model, auth, submission, artifact and notice events
- * fold; turns, tools, recoveries and HITL handoffs stay visible. */
+/** System events never render in the thread — they collect into a single
+ * "Activity" disclosure. The thread stays a pure conversation: turns, tools,
+ * agent sections, run labels and HITL handoffs are visible; run lifecycle,
+ * browser, model, auth, recovery and other telemetry fold away. */
 export function isQuiet(row: ChatRow): boolean {
   if (row.kind === "model-cluster") return true;
   if (row.kind !== "row") return false;
-  return ["model", "browser", "agent", "context", "run", "auth", "submission", "artifact", "notice"].includes(row.item.kind);
+  // HITL handoff cards stay visible (actionable); everything else folds.
+  if (row.item.kind === "human" && row.item.sub === "handoff") return false;
+  return [
+    "model",
+    "browser",
+    "agent",
+    "context",
+    "run",
+    "auth",
+    "submission",
+    "artifact",
+    "notice",
+    "recovery",
+    "human",
+  ].includes(row.item.kind);
 }
 
 /** Collapse consecutive quiet system rows into one expandable activity group. */
