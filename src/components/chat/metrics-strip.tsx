@@ -11,6 +11,8 @@ export function MetricsStrip({ runId, liveCount }: { runId: string; liveCount: n
   const ttftMs = perf.length ? perf.reduce((sum, item) => sum + item.avgTtftMs, 0) / perf.length : 0;
   const tps = perf.length ? perf.reduce((sum, item) => sum + item.avgTokPerSecond, 0) / perf.length : 0;
   const costUsd = perf.reduce((sum, item) => sum + item.costUsd, 0);
+  const cacheTokens = perf.reduce((sum, item) => sum + item.totalCacheTokens, 0);
+  const cacheRate = perf.length ? perf.reduce((sum, item) => sum + item.cacheHitRate, 0) / perf.length : 0;
   const avgIn = calls > 0 ? inTokens / calls : 0;
   const model = perf.length ? perf[0].model : "selecting…";
 
@@ -36,8 +38,11 @@ export function MetricsStrip({ runId, liveCount }: { runId: string; liveCount: n
       <span className={cn(chip, "tabular-nums")} title="tokens per second (avg)">
         {tps > 0 ? `${tps.toFixed(0)} tok/s` : "—"}
       </span>
+      <span className={cn(chip, "tabular-nums")} title={`cache read tokens: ${fmtNum(cacheTokens)} of ${fmtNum(inTokens)} input`}>
+        cache {cacheRate > 0 ? `${(cacheRate * 100).toFixed(0)}%` : "—"}
+      </span>
       {costUsd > 0 && (
-        <span className={cn(chip, "tabular-nums")} title={`estimated cost at ${perf[0]?.provider ?? "opencodego"} list rates`}>
+        <span className={cn(chip, "tabular-nums")} title={`estimated cost at ${perf[0]?.provider ?? "opencodego"} list rates (cache-aware)`}>
           ~${costUsd.toFixed(3)}
         </span>
       )}

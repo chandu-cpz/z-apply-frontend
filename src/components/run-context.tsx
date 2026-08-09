@@ -1,9 +1,29 @@
-import { Ban, BriefcaseBusiness, ExternalLink, PanelRight, Sparkles } from "lucide-react";
+import { Ban, BriefcaseBusiness, CheckCircle2, ExternalLink, PanelRight, Sparkles, XCircle } from "lucide-react";
 import type { Run } from "../types";
 
 export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCancel(): void; onOpenSubagents(): void }) {
+  const submitted = run.outcome === "submitted_verified";
+  const failed = run.status === "terminal" && !submitted && run.outcome !== "cancelled";
   return (
     <aside className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto border-r border-border bg-muted/40 p-3 dark:bg-zinc-950">
+      {submitted && (
+        <div className="rounded-xl border border-emerald-300/60 bg-emerald-50 p-3.5 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/40">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="text-emerald-600 dark:text-emerald-300" size={18} />
+            <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Application submitted</span>
+          </div>
+          {run.summary && <p className="mt-2 text-[13px] leading-relaxed text-emerald-900/80 dark:text-emerald-100/80">{run.summary}</p>}
+        </div>
+      )}
+      {failed && (
+        <div className="rounded-xl border border-rose-300/60 bg-rose-50 p-3.5 shadow-sm dark:border-rose-900/60 dark:bg-rose-950/40">
+          <div className="flex items-center gap-2">
+            <XCircle className="text-rose-600 dark:text-rose-300" size={18} />
+            <span className="text-sm font-semibold text-rose-800 dark:text-rose-200">Run ended {run.outcome ?? "unsuccessfully"}</span>
+          </div>
+          {run.summary && <p className="mt-2 text-[13px] leading-relaxed text-rose-900/80 dark:text-rose-100/80">{run.summary}</p>}
+        </div>
+      )}
       <div className="rounded-xl border border-border bg-card p-3.5">
         <div className="flex items-start gap-3">
           <span className="grid size-9 place-items-center rounded-lg bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-200"><BriefcaseBusiness size={18} /></span>
