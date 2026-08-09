@@ -1,11 +1,7 @@
 import { ArrowUpRight } from "lucide-react";
-import { useLayoutEffect, useRef, useState } from "react";
-import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import { cn } from "../lib/utils";
 import type { Run } from "../types";
 import { PageShell } from "../components/page-shell";
-
-const ROW_HEIGHT = 57;
 
 function statusChip(run: Run): { label: string; cls: string; dot: string } {
   const submitted = run.outcome === "submitted_verified";
@@ -19,14 +15,35 @@ function statusChip(run: Run): { label: string; cls: string; dot: string } {
   return { label: run.outcome?.replaceAll("_", " ") || "finished", cls: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300", dot: "bg-zinc-400" };
 }
 
+/** Application identity: company on top, role (or hostname) under it — never
+ * the same string twice, full URL on hover. */
+function AppIdentity({ run }: { run: Run }) {
+  const title = run.company || hostname(run.job_url);
+  const subtitle = run.role || (run.company ? hostname(run.job_url) : "");
+  return (
+    <>
+      <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100" title={run.job_url}>
+        {title}
+      </p>
+      {subtitle && (
+        <p className="mt-0.5 truncate text-xs text-zinc-400 dark:text-zinc-500" title={run.role ? run.role : run.job_url}>
+          {subtitle}
+        </p>
+      )}
+    </>
+  );
+}
+
 function RunRowCard({ run, onOpen }: { run: Run; onOpen(run: Run): void }) {
   const chip = statusChip(run);
   return (
-    <button className="w-full rounded-xl border border-zinc-200 bg-white p-4 text-left transition hover:border-violet-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-violet-800" onClick={() => onOpen(run)}>
+    <button
+      className="w-full rounded-xl border border-zinc-200 bg-white p-4 text-left transition hover:border-violet-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-violet-800"
+      onClick={() => onOpen(run)}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100" title={run.job_url}>{run.company || hostname(run.job_url)}</p>
-          <p className="mt-0.5 truncate text-xs text-zinc-400 dark:text-zinc-500" title={run.role ? run.role : run.job_url}>{run.role || hostname(run.job_url)}</p>
+          <AppIdentity run={run} />
         </div>
         <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
           <ArrowUpRight size={15} />
@@ -45,51 +62,37 @@ function RunRowCard({ run, onOpen }: { run: Run; onOpen(run: Run): void }) {
 }
 
 export function HistoryScreen({ runs, onOpen }: { runs: Run[]; onOpen(run: Run): void }) {
-  const tableRef = useRef<HTMLDivElement>(null);
-  const [scrollMargin, setScrollMargin] = useState(0);
-  useLayoutEffect(() => {
-    setScrollMargin(tableRef.current?.getBoundingClientRect().top ?? 0);
-  }, []);
-  const virtualizer = useWindowVirtualizer({
-    count: runs.length,
-    estimateSize: () => ROW_HEIGHT,
-    overscan: 10,
-    scrollMargin,
-  });
   return (
-    <PageShell eyebrow="RUN LEDGER" title="Runs" description="Every application this cockpit has run. Open one to see the full conversation, browser state, and artifacts.">
+    <PageShell title="Runs" description="Every application this cockpit has run. Open one to see the full conversation, browser state, and artifacts.">
       <div className="grid gap-3 md:hidden">
         {runs.map((run) => (
           <RunRowCard key={run.id} run={run} onOpen={onOpen} />
         ))}
         {runs.length === 0 && <EmptyState />}
       </div>
-      <div ref={tableRef} className="hidden overflow-hidden rounded-xl border border-zinc-200 bg-white md:block dark:border-zinc-800 dark:bg-zinc-900">
-        <table className="w-full text-left text-[13px]">
+      <div className="hidden overflow-hidden rounded-xl border border-zinc-200 bg-white md:block dark:border-zinc-800 dark:bg-zinc-900">
+        <table className="w-full table-fixed text-left text-[13px]">
           <thead className="bg-zinc-50/80 text-[11px] text-zinc-400 dark:bg-zinc-950/40 dark:text-zinc-500">
             <tr>
-              <th className="px-4 py-3 font-medium">Application</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Phase</th>
-              <th className="px-4 py-3 font-medium">Outcome</th>
-              <th className="px-4 py-3 font-medium">Started</th>
+              <th className="w-[30%] px-4 py-3 font-medium">Application</th>
+              <th className="w-[14%] px-4 py-3 font-medium">Status</th>
+              <th className="w-[14%] px-4 py-3 font-medium">Phase</th>
+              <th className="w-[16%] px-4 py-3 font-medium">Outcome</th>
+              <th className="w-[22%] px-4 py-3 font-medium">Started</th>
               <th className="w-12" />
             </tr>
           </thead>
-          <tbody style={{ height: `${virtualizer.getTotalSize()}px`, position: "relative" }}>
-            {virtualizer.getVirtualItems().map((row) => {
-              const run = runs[row.index];
+          <tbody>
+            {runs.map((run) => {
               const chip = statusChip(run);
               return (
                 <tr
-                  className="absolute top-0 left-0 w-full cursor-pointer border-t border-zinc-100 transition-colors hover:bg-violet-50/40 dark:border-zinc-800 dark:hover:bg-violet-950/20"
+                  className="cursor-pointer border-t border-zinc-100 transition-colors hover:bg-violet-50/40 dark:border-zinc-800 dark:hover:bg-violet-950/20"
                   key={run.id}
-                  style={{ height: `${row.size}px`, transform: `translateY(${row.start - scrollMargin}px)` }}
                   onClick={() => onOpen(run)}
                 >
-                  <td className="w-2/5 max-w-[360px] px-4 py-3">
-                    <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100" title={run.job_url}>{run.company || hostname(run.job_url)}</p>
-                    <p className="mt-0.5 truncate text-xs text-zinc-400 dark:text-zinc-500" title={run.role ? run.role : run.job_url}>{run.role || hostname(run.job_url)}</p>
+                  <td className="px-4 py-3">
+                    <AppIdentity run={run} />
                   </td>
                   <td className="px-4 py-3">
                     <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium", chip.cls)}>

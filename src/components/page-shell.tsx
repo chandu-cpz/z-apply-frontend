@@ -1,6 +1,6 @@
 import type { PropsWithChildren, ReactNode } from "react";
 
-export function PageShell({ eyebrow, title, description, action, children }: PropsWithChildren<{ eyebrow: string; title: string; description: string; action?: ReactNode }>) {
+export function PageShell({ eyebrow, title, description, action, children }: PropsWithChildren<{ eyebrow?: string; title: string; description: string; action?: ReactNode }>) {
   return (
     <main className="mx-auto max-w-7xl px-4 py-6 sm:px-5 sm:py-8">
       <header className="mb-6 flex flex-col gap-4 border-b border-zinc-200 pb-5 sm:mb-7 sm:flex-row sm:items-end sm:justify-between sm:gap-6 dark:border-zinc-800">
