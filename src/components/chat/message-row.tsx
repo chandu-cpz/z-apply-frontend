@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bot, ChevronRight, RotateCcw } from "lucide-react";
+import { Bot, ChevronRight, HelpCircle, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fmtTime, humanAgent } from "@/lib/format";
 import type { ModelClusterItem, ModelEntry, TimelineItem } from "@/lib/timeline/types";
@@ -186,6 +186,31 @@ export function ModelClusterRowCard({ item }: { item: ModelClusterItem }) {
         <Meta occurredAt={item.occurredAt} />
       </button>
       {open && item.entries.map((entry) => <ModelClusterRow key={entry.seq} entry={entry} />)}
+    </div>
+  );
+}
+
+export function HumanHandoffCard({ item }: { item: Extract<TimelineItem, { kind: "human" }> }) {
+  return (
+    <div className="mb-3 rounded-xl border border-amber-200/70 bg-amber-50/70 shadow-sm dark:border-amber-900/50 dark:bg-amber-950/15">
+      <div className="flex items-center gap-3 px-3.5 py-3">
+        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300">
+          <HelpCircle size={15} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[13.5px] font-semibold text-amber-900 dark:text-amber-100">{item.question || "You were asked"}</p>
+          {item.answer ? (
+            <p className="mt-0.5 text-[13px] text-amber-800/90 dark:text-amber-200/90">
+              Your answer: <span className="font-medium">{item.answer}</span>
+            </p>
+          ) : (
+            <p className="mt-0.5 text-[13px] text-amber-700/80 dark:text-amber-200/70">Waiting for your answer…</p>
+          )}
+        </div>
+        <time className="shrink-0 text-xs tabular-nums text-amber-500/80 dark:text-amber-300/60" title={item.resolvedAt ? "resolved" : "requested"}>
+          {fmtTime(item.resolvedAt || item.occurredAt)}
+        </time>
+      </div>
     </div>
   );
 }

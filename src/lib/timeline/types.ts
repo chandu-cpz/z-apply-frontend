@@ -82,7 +82,7 @@ export type TimelineItem =
   | { kind: "model-cluster"; seq: number; occurredAt: string; agent: string; entries: ModelEntry[]; selected: number; failed: number; rotated: number; retrying: number; rateLimited: number; lastModel: string; lastSub: string }
   | { kind: "browser"; seq: number; sub: string; detail: string; occurredAt: string }
   | { kind: "recovery"; seq: number; attempt: number; errorType: string; detail: string; stage: string; occurredAt: string }
-  | { kind: "human"; seq: number; sub: string; detail: string; occurredAt: string }
+  | { kind: "human"; seq: number; sub: string; detail: string; occurredAt: string; question?: string; answer?: string; resolvedAt?: string }
   | { kind: "submission"; seq: number; sub: string; detail: string; occurredAt: string }
   | { kind: "artifact"; seq: number; filename: string; kind2: string; occurredAt: string }
   | { kind: "run"; seq: number; sub: string; detail: string; occurredAt: string }

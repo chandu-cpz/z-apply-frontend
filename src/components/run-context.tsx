@@ -1,6 +1,7 @@
 import { Ban, BriefcaseBusiness, CheckCircle2, ExternalLink, PanelRight, Sparkles, Timer, XCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
+import { useModelPerformance } from "../lib/perf";
 import type { Artifact, Run } from "../types";
 
 export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCancel(): void; onOpenSubagents(): void }) {
@@ -35,6 +36,8 @@ export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCan
           {run.task || "Complete the application carefully, verify it, and request approval before submission."}
         </p>
       </div>
+
+      <RunStats runId={run.id} />
 
       <div className="px-1">
         <p className="font-mono text-[11px] tracking-[.12em] text-muted-foreground uppercase">Current activity</p>
@@ -126,4 +129,36 @@ function durationLabel(run: Run): string | null {
 
 function byKind(artifacts: Artifact[] | undefined, kind: string): Artifact | undefined {
   return artifacts?.find((artifact) => artifact.kind === kind);
+}
+
+function RunStats({ runId }: { runId: string }) {
+  const perf = useModelPerformance(runId);
+  const calls = perf.reduce((sum, item) => sum + item.calls, 0);
+  const inTokens = perf.reduce((sum, item) => sum + item.totalInputTokens, 0);
+  const outTokens = perf.reduce((sum, item) => sum + item.totalOutputTokens, 0);
+  const cacheRate = perf.length ? perf.reduce((sum, item) => sum + item.cacheHitRate, 0) / perf.length : 0;
+  const costUsd = perf.reduce((sum, item) => sum + item.costUsd, 0);
+  if (calls === 0) return null;
+  const cell = "rounded-lg border border-border bg-card px-2 py-1.5";
+  const value = "block font-mono text-[13px] font-semibold text-foreground";
+  const label = "block text-[9px] font-mono uppercase tracking-[.1em] text-muted-foreground";
+  return (
+    <div className="rounded-xl border border-border bg-card p-3">
+      <p className="font-mono text-[11px] tracking-[.12em] text-muted-foreground uppercase">Run stats</p>
+      <div className="mt-2 grid grid-cols-3 gap-1.5">
+        <div className={cell}><span className={value}>{calls}</span><span className={label}>calls</span></div>
+        <div className={cell}><span className={value}>{fmtCompact(inTokens)}</span><span className={label}>in tokens</span></div>
+        <div className={cell}><span className={value}>{fmtCompact(outTokens)}</span><span className={label}>out</span></div>
+        <div className={cell}><span className={value}>{cacheRate > 0 ? `${(cacheRate * 100).toFixed(0)}%` : "—"}</span><span className={label}>cache</span></div>
+        <div className={cell}><span className={value}>${costUsd.toFixed(3)}</span><span className={label}>cost</span></div>
+        <div className={cell}><span className={value}>{perf[0] ? perf[0].model.split("-")[0] : "—"}</span><span className={label}>model</span></div>
+      </div>
+    </div>
+  );
+}
+
+function fmtCompact(value: number): string {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}k`;
+  return String(value);
 }

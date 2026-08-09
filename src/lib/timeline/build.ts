@@ -299,6 +299,28 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
     items.push({ kind: "tool", item: tool });
   }
   const sorted = items.sort((left, right) => ("item" in left ? left.item.seq : left.seq) - ("item" in right ? right.item.seq : right.seq));
+  // Pair each human.requested with its matching human.resolved into one
+  // handoff card (question + your answer + both timestamps) instead of two
+  // bare rows.
+  const sortedHumanPaired: TimelineItem[] = [];
+  for (let index = 0; index < sorted.length; index += 1) {
+    const item = sorted[index];
+    if (item.kind === "human" && item.sub === "requested") {
+      const next = sorted[index + 1];
+      if (next && next.kind === "human" && next.sub === "resolved") {
+        sortedHumanPaired.push({
+          ...item,
+          sub: "handoff",
+          question: item.detail,
+          answer: next.detail.replace(/^answered: /, ""),
+          resolvedAt: next.occurredAt,
+        });
+        index += 1;
+        continue;
+      }
+    }
+    sortedHumanPaired.push(item);
+  }
   const merged: TimelineItem[] = [];
   let pending: Array<TimelineItem & { kind: "model" }> = [];
   const flush = () => {

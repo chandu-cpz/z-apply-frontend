@@ -8,8 +8,7 @@ import type { ActivityEvent, Run } from "@/types";
 import { useLiveStore } from "@/live-store";
 import { LiveAssistant, TurnMessage } from "./message-assistant";
 import { ToolMessage } from "./message-tool";
-import { ActivityGroup, ModelClusterRowCard, RecoveryRow, RunLabel, SectionDivider, SystemRow } from "./message-row";
-import { MetricsStrip } from "./metrics-strip";
+import { ActivityGroup, HumanHandoffCard, ModelClusterRowCard, RecoveryRow, RunLabel, SectionDivider, SystemRow } from "./message-row";
 import { flattenTimeline, groupRows, isQuiet, rowKey, type ChatRow } from "./rows";
 
 const FOLLOW_THRESHOLD_PX = 80;
@@ -30,6 +29,9 @@ export function RowRenderer({ row }: { row: ChatRow }) {  switch (row.kind) {
     case "model-cluster":
       return <ModelClusterRowCard item={row.item} />;
     case "row":
+      if (row.item.kind === "human" && row.item.sub === "handoff") {
+        return <HumanHandoffCard item={row.item} />;
+      }
       return <SystemRow item={row.item} compact={isQuiet(row)} />;
     case "activity-group":
       return <ActivityGroup group={row} />;
@@ -82,7 +84,6 @@ export function MessageList({ runId, events, run }: { runId: string; events: Act
 
   return (
     <section className="relative flex h-full min-h-0 flex-col bg-background">
-      <MetricsStrip runId={runId} liveCount={liveAgents.length} />
       <div ref={scrollRef} onScroll={onScroll} className="min-h-0 flex-1 overflow-y-auto overscroll-contain" role="log" aria-live="polite">
         <div className="mx-auto w-full max-w-[760px] px-5 py-6">
           {rows.length === 0 && <EmptyState />}
