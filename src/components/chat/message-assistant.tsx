@@ -122,11 +122,34 @@ export const LiveAssistant = memo(function LiveAssistant({ agent }: { agent: Liv
           </time>
         </div>
         {waiting && (
-          <div className="flex flex-col gap-2 py-1" aria-label="thinking">
-            <div className="h-3 w-11/12 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" />
-            <div className="h-3 w-8/12 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" />
-            <div className="h-3 w-10/12 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" />
-          </div>
+          <>
+            <style>{`
+              @keyframes z-shimmer-sweep {
+                0% { background-position: 200% 0; }
+                100% { background-position: -200% 0; }
+              }
+              .z-shimmer-line {
+                background: linear-gradient(90deg,
+                  rgb(212 212 216 / 0.45) 25%,
+                  rgb(244 244 245 / 0.9) 50%,
+                  rgb(212 212 216 / 0.45) 75%);
+                background-size: 200% 100%;
+                animation: z-shimmer-sweep 1.4s linear infinite;
+              }
+              .dark .z-shimmer-line {
+                background: linear-gradient(90deg,
+                  rgb(39 39 42 / 0.45) 25%,
+                  rgb(82 82 91 / 0.75) 50%,
+                  rgb(39 39 42 / 0.45) 75%);
+                background-size: 200% 100%;
+              }
+            `}</style>
+            <div className="flex flex-col gap-2 py-1" aria-label="thinking">
+              <div className="z-shimmer-line h-3 w-11/12 rounded-full" />
+              <div className="z-shimmer-line h-3 w-8/12 rounded-full" />
+              <div className="z-shimmer-line h-3 w-10/12 rounded-full" />
+            </div>
+          </>
         )}
         <ThinkingStrip reasoning={agent.reasoning} streaming={streaming} />
         {tools.length > 0 && (
