@@ -339,8 +339,8 @@ export function StallRow({ item }: { item: Extract<TimelineItem, { kind: "stall"
   );
 }
 
-/** Final submission approval, inline in the chat: an IRREVERSIBLE ACTION card
- * with Approve/Reject, resolved state shows the decision. */
+/** Final submission approval, inline in the chat: a compact IRREVERSIBLE ACTION
+ * card with Approve/Reject, resolved state shows the decision. */
 export function SubmissionApprovalCard({
   item,
   onDecide,
@@ -359,51 +359,52 @@ export function SubmissionApprovalCard({
   };
 
   return (
-    <div className="mb-4 rounded-xl border border-rose-200/80 bg-rose-50/50 p-3.5 dark:border-rose-900/40 dark:bg-rose-950/15">
+    <div className="mb-3 overflow-hidden rounded-xl border border-rose-200/70 bg-rose-50/40 px-3.5 py-2.5 dark:border-rose-900/40 dark:bg-rose-950/15">
       <div className="flex items-center gap-2">
-        <ShieldAlert size={14} className={cn("shrink-0", resolved ? (item.decision === "approved" ? "text-emerald-500" : "text-rose-400") : "text-rose-500")} />
-        <span className={cn("text-[12px] font-semibold tracking-wide", resolved ? (item.decision === "approved" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500") : "text-rose-700 dark:text-rose-300")}>
-          {resolved ? (item.decision === "approved" ? "Submission approved" : "Submission rejected") : "Irreversible action — requires your approval"}
+        <ShieldAlert size={13} className={cn("shrink-0", resolved ? (item.decision === "approved" ? "text-emerald-500" : "text-rose-400") : "text-rose-500")} />
+        <span className={cn("text-[11px] font-semibold tracking-wide", resolved ? (item.decision === "approved" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500") : "text-rose-700 dark:text-rose-300")}>
+          {resolved ? (item.decision === "approved" ? "Submission approved" : "Submission rejected") : "Irreversible action"}
         </span>
+        {!resolved && <span className="hidden text-[10.5px] text-rose-400/80 sm:inline dark:text-rose-300/60">· requires your approval</span>}
         <time className="ml-auto shrink-0 text-[10.5px] tabular-nums text-rose-400/80 dark:text-rose-300/60">{fmtTime(item.occurredAt)}</time>
       </div>
-      <p className="mt-2 text-[13px] font-medium text-zinc-900 dark:text-zinc-100">{item.question || item.detail || "Submit this application?"}</p>
-      {item.context && (
-        <div className="mt-2">
+      <p className="mt-1.5 text-[13px] font-medium text-zinc-900 dark:text-zinc-100">{item.question || item.detail || "Submit this application?"}</p>
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        {!resolved && requestId && onDecide && (
+          <>
+            <button
+              type="button"
+              disabled={sending}
+              onClick={() => decide("approve")}
+              className="rounded-lg bg-rose-600 px-3 py-1 text-[12px] font-medium text-white transition hover:bg-rose-700 disabled:opacity-50"
+            >
+              Approve submission
+            </button>
+            <button
+              type="button"
+              disabled={sending}
+              onClick={() => decide("reject")}
+              className="rounded-lg border border-zinc-200 bg-white px-3 py-1 text-[12px] font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              Reject
+            </button>
+          </>
+        )}
+        {item.context && (
           <button
             type="button"
             onClick={() => setShowContext((value) => !value)}
-            className="flex items-center gap-1.5 text-[11.5px] text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+            className="ml-auto flex items-center gap-1 px-1 text-[11px] text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
           >
             <ChevronRight size={11} className={cn("transition-transform", showContext && "rotate-90")} />
             Review evidence
           </button>
-          {showContext && (
-            <pre className="mt-1.5 max-h-56 overflow-auto rounded-lg bg-white/80 px-3 py-2 font-mono text-[11.5px] leading-relaxed whitespace-pre-wrap text-zinc-600 dark:bg-zinc-950/40 dark:text-zinc-300">
-              {item.context}
-            </pre>
-          )}
-        </div>
-      )}
-      {!resolved && requestId && onDecide && (
-        <div className="mt-3 flex items-center gap-2">
-          <button
-            type="button"
-            disabled={sending}
-            onClick={() => decide("approve")}
-            className="rounded-lg bg-rose-600 px-3.5 py-1.5 text-[12.5px] font-medium text-white transition hover:bg-rose-700 disabled:opacity-50"
-          >
-            Approve submission
-          </button>
-          <button
-            type="button"
-            disabled={sending}
-            onClick={() => decide("reject")}
-            className="rounded-lg border border-zinc-200 bg-white px-3.5 py-1.5 text-[12.5px] font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-          >
-            Reject
-          </button>
-        </div>
+        )}
+      </div>
+      {showContext && item.context && (
+        <pre className="mt-2 max-h-56 overflow-auto rounded-lg bg-white/80 px-3 py-2 font-mono text-[11.5px] leading-relaxed whitespace-pre-wrap text-zinc-600 dark:bg-zinc-950/40 dark:text-zinc-300">
+          {item.context}
+        </pre>
       )}
     </div>
   );
