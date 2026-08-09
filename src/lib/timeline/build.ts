@@ -323,7 +323,22 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
 
     if (type.startsWith("submission.")) {
       const sub = type.replace("submission.", "");
-      const detail = sub === "approval_requested" ? str(payload.question) : sub === "approved" || sub === "rejected" ? `by ${str(payload.responder)}` : eventDetail(event);
+      if (type === "submission.approval_requested") {
+        items.push({
+          kind: "submission",
+          seq,
+          sub: "approval_requested",
+          detail: str(payload.question),
+          occurredAt,
+          question: str(payload.question),
+          request_id: str(payload.request_id),
+          options: Array.isArray(payload.options) ? payload.options.map(String) : [],
+          risk: str(payload.risk),
+          context: str(payload.context),
+        });
+        continue;
+      }
+      const detail = sub === "approved" || sub === "rejected" ? `by ${str(payload.responder)}` : eventDetail(event);
       items.push({ kind: "submission", seq, sub, detail: detail.slice(0, 200), occurredAt });
       continue;
     }
@@ -367,24 +382,38 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
   const pairedIndexes = new Set<number>();
   for (let index = 0; index < sorted.length; index += 1) {
     const item = sorted[index];
-    if (item.kind === "human" && item.sub === "requested" && !pairedIndexes.has(index)) {
+    const isRequest =
+      (item.kind === "human" && item.sub === "requested") ||
+      (item.kind === "submission" && item.sub === "approval_requested");
+    if (isRequest && !pairedIndexes.has(index)) {
+      const resolutionSubs =
+        item.kind === "human" ? new Set(["resolved", "cancelled"]) : new Set(["approved", "rejected"]);
       let resolvedIndex = index + 1;
       while (resolvedIndex < sorted.length) {
         const candidate = sorted[resolvedIndex];
-        if (candidate.kind === "human" && (candidate.sub === "resolved" || candidate.sub === "cancelled")) break;
+        if (candidate.kind === item.kind && resolutionSubs.has(candidate.sub)) break;
         resolvedIndex += 1;
       }
       if (resolvedIndex < sorted.length) {
-        const resolved = sorted[resolvedIndex] as Extract<TimelineItem, { kind: "human" }>;
+        const resolved = sorted[resolvedIndex] as Extract<TimelineItem, { kind: "human" | "submission" }>;
         pairedIndexes.add(index);
         pairedIndexes.add(resolvedIndex);
-        sortedHumanPaired.push({
-          ...item,
-          sub: resolved.sub === "resolved" ? "handoff" : "cancelled",
-          question: item.detail,
-          answer: resolved.sub === "resolved" ? resolved.detail.replace(/^answered: /, "") : undefined,
-          resolvedAt: resolved.sub === "resolved" ? resolved.occurredAt : undefined,
-        });
+        if (item.kind === "human") {
+          sortedHumanPaired.push({
+            ...item,
+            sub: resolved.sub === "resolved" ? "handoff" : "cancelled",
+            question: item.detail,
+            answer: resolved.sub === "resolved" ? resolved.detail.replace(/^answered: /, "") : undefined,
+            resolvedAt: resolved.sub === "resolved" ? resolved.occurredAt : undefined,
+          });
+        } else {
+          sortedHumanPaired.push({
+            ...item,
+            sub: resolved.sub, // "approved" | "rejected"
+            decision: resolved.sub,
+            decidedAt: resolved.occurredAt,
+          });
+        }
         continue;
       }
     }

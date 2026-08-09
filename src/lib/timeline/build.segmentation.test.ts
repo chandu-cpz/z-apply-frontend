@@ -310,4 +310,27 @@ describe("buildTimeline human pairing", () => {
     expect(humans[0].question).toBe("Are you mobile?");
     expect(humans[0].answer).toBeUndefined();
   });
+
+  it("pairs a submission approval with its decision into one card", () => {
+    const events = [
+      ev(1, "submission.approval_requested", "core", {
+        kind: "submission_approval",
+        question: "Submit this application?",
+        options: ["Approve", "Reject"],
+        risk: "high",
+        request_id: "req-9",
+        context: "Final review…",
+      }),
+      ev(2, "submission.approved", "core", { responder: "web" }),
+    ];
+    const items = buildTimeline(events);
+    const submissions = items.filter((item) => item.kind === "submission") as Array<Extract<TimelineItem, { kind: "submission" }>>;
+    expect(submissions).toHaveLength(1);
+    expect(submissions[0].sub).toBe("approved");
+    expect(submissions[0].question).toBe("Submit this application?");
+    expect(submissions[0].request_id).toBe("req-9");
+    expect(submissions[0].options).toEqual(["Approve", "Reject"]);
+    expect(submissions[0].decision).toBe("approved");
+    expect(submissions[0].decidedAt).toBe("2026-08-03T10:00:02Z");
+  });
 });

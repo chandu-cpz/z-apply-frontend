@@ -27,8 +27,9 @@ export function isQuiet(row: ChatRow): boolean {
   if (row.kind === "model-cluster") return true;
   if (row.kind !== "row") return false;
   // HITL handoff cards, pending requests AND cancelled cards stay visible;
-  // only resolved/cancelled system rows fold away.
+  // submission approvals stay visible and interactive; everything else folds.
   if (row.item.kind === "human" && (row.item.sub === "handoff" || row.item.sub === "requested" || row.item.sub === "cancelled")) return false;
+  if (row.item.kind === "submission" && ["approval_requested", "approved", "rejected"].includes(row.item.sub)) return false;
   return [
     "model",
     "browser",

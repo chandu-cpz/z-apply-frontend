@@ -83,7 +83,7 @@ export type TimelineItem =
   | { kind: "browser"; seq: number; sub: string; detail: string; occurredAt: string }
   | { kind: "recovery"; seq: number; attempt: number; errorType: string; detail: string; stage: string; occurredAt: string }
   | { kind: "human"; seq: number; sub: string; detail: string; occurredAt: string; question?: string; answer?: string; resolvedAt?: string; request_id?: string; options?: string[]; allow_free_text?: boolean }
-  | { kind: "submission"; seq: number; sub: string; detail: string; occurredAt: string }
+  | { kind: "submission"; seq: number; sub: string; detail: string; occurredAt: string; question?: string; request_id?: string; options?: string[]; risk?: string; context?: string; decision?: string; decidedAt?: string }
   | { kind: "artifact"; seq: number; filename: string; kind2: string; occurredAt: string }
   | { kind: "run"; seq: number; sub: string; detail: string; occurredAt: string }
   | { kind: "auth"; seq: number; status: string; summary: string; occurredAt: string }

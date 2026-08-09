@@ -8,7 +8,7 @@ import type { ActivityEvent, Run } from "@/types";
 import { useLiveStore } from "@/live-store";
 import { LiveAssistant, TurnMessage } from "./message-assistant";
 import { ToolMessage } from "./message-tool";
-import { ActivityGroup, HumanHandoffCard, ModelClusterRowCard, RecoveryRow, RunLabel, SectionDivider, StallRow, SystemRow } from "./message-row";import { flattenTimeline, groupRows, isQuiet, rowKey, type ChatRow } from "./rows";
+import { ActivityGroup, HumanHandoffCard, ModelClusterRowCard, RecoveryRow, RunLabel, SectionDivider, StallRow, SubmissionApprovalCard, SystemRow } from "./message-row";import { flattenTimeline, groupRows, isQuiet, rowKey, type ChatRow } from "./rows";
 
 const FOLLOW_THRESHOLD_PX = 80;
 
@@ -106,7 +106,7 @@ function RunHeader({ run }: { run: Run }) {
   );
 }
 
-export function RowRenderer({ row, onAnswer }: { row: ChatRow; onAnswer?: (requestId: string, answer: string) => void }) {  switch (row.kind) {
+export function RowRenderer({ row, onAnswer, onDecide }: { row: ChatRow; onAnswer?: (requestId: string, answer: string) => void; onDecide?: (requestId: string, decision: "approve" | "reject") => void }) {  switch (row.kind) {
     case "assistant-live":
       return <LiveAssistant agent={row.agent} />;
     case "turn":
@@ -128,6 +128,9 @@ export function RowRenderer({ row, onAnswer }: { row: ChatRow; onAnswer?: (reque
       if (row.item.kind === "stall") {
         return <StallRow item={row.item} />;
       }
+      if (row.item.kind === "submission" && ["approval_requested", "approved", "rejected"].includes(row.item.sub)) {
+        return <SubmissionApprovalCard item={row.item} onDecide={onDecide} />;
+      }
       return <SystemRow item={row.item} compact={isQuiet(row)} />;
     case "activity-group":
       return <ActivityGroup group={row} />;
@@ -144,7 +147,7 @@ function EmptyState() {
   );
 }
 
-export function MessageList({ runId, events, run, onAnswer }: { runId: string; events: ActivityEvent[]; run: Run; onAnswer?: (requestId: string, answer: string) => void }) {
+export function MessageList({ runId, events, run, onAnswer, onDecide }: { runId: string; events: ActivityEvent[]; run: Run; onAnswer?: (requestId: string, answer: string) => void; onDecide?: (requestId: string, decision: "approve" | "reject") => void }) {
   const boundaries = useMemo(() => turnBoundaries(events), [events]);
   const live = useLiveStore((state) => state.byRun[runId] ?? EMPTY_LIVELY);
   const liveAgents = useMemo<LiveAgent[]>(() => mergeLive(live, boundaries), [live, boundaries]);
@@ -197,7 +200,7 @@ export function MessageList({ runId, events, run, onAnswer }: { runId: string; e
           {rows.length === 0 && <EmptyState />}
           {rows.map((row) => (
             <div key={rowKey(row)}>
-              <RowRenderer row={row} onAnswer={onAnswer} />
+              <RowRenderer row={row} onAnswer={onAnswer} onDecide={onDecide} />
             </div>
           ))}
         </div>

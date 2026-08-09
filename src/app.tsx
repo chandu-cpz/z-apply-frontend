@@ -7,7 +7,6 @@ import { api } from "./api";
 import { AgentConversation } from "./components/agent-conversation";
 import { AgentsDrawer } from "./components/agents-drawer";
 import { BrowserPanel } from "./components/browser-panel";
-import { HumanPanel } from "./components/human-panel";
 import { RunContext } from "./components/run-context";
 import { RunRail } from "./components/run-tabs";
 import { StartRun } from "./components/start-run";
@@ -17,7 +16,7 @@ import { ArtifactsScreen } from "./screens/artifacts-screen";
 import { DiagnosticsScreen } from "./screens/diagnostics-screen";
 import { HistoryScreen } from "./screens/history-screen";
 import { SettingsScreen } from "./screens/settings-screen";
-import type { HumanRequest, Run } from "./types";
+import type { Run } from "./types";
 import { useUiStore } from "./ui-store";
 
 export function App() {
@@ -163,31 +162,13 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
   const [returningControl, setReturningControl] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<"activity" | "browser" | "run">("activity");
   const [subagentsOpen, setSubagentsOpen] = useState(false);
-  const [respondingIds, setRespondingIds] = useState<Set<string>>(new Set());
   const desktop = useDesktopWorkspace();
   const layout = useDefaultLayout({ id: "z-apply-workspace-v4", storage: localStorage });
   const events = useQuery({ queryKey: ["events", run.id], queryFn: () => api.events(run.id), refetchInterval: 5_000 });
-  const human = useQuery({ queryKey: ["human", run.id], queryFn: () => api.human(run.id), refetchInterval: 3_000, enabled: run.status !== "terminal" });
   const live = useQuery({ queryKey: ["live"], queryFn: api.liveView, refetchInterval: 2_000 });
-  const refresh = () => { void query.invalidateQueries({ queryKey: ["runs"] }); void query.invalidateQueries({ queryKey: ["run", run.id] }); void query.invalidateQueries({ queryKey: ["human", run.id] }); void query.invalidateQueries({ queryKey: ["live"] }); };
+  const refresh = () => { void query.invalidateQueries({ queryKey: ["runs"] }); void query.invalidateQueries({ queryKey: ["run", run.id] }); void query.invalidateQueries({ queryKey: ["live"] }); };
 
   const action = useMutation({ mutationFn: async (operation: () => Promise<unknown>) => operation(), onSuccess: refresh, onError: (error) => toast.error("Action could not be completed", { description: error.message }) });
-  const respond = useMutation({
-    mutationFn: ({ request, answer, decision }: { request: HumanRequest; answer?: string; decision?: "approve" | "reject" }) => request.kind === "submission_approval" ? api.decide(run.id, request.request_id, decision!) : api.answer(run.id, request.request_id, answer!),
-    onSuccess: () => { refresh(); toast.success("Response delivered to Core"); },
-    onError: (error) => toast.error("Response was not accepted", { description: error.message }),
-  });
-  const submitResponse = (request: HumanRequest, answer?: string, decision?: "approve" | "reject") => {
-    setRespondingIds((prev) => new Set(prev).add(request.request_id));
-    respond.mutate({ request, answer, decision }, {
-      onSettled: () => setRespondingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(request.request_id);
-        return next;
-      }),
-    });
-  };
-  const pendingRequests = (human.data ?? []).filter((item) => item.status === "pending");
   const humanControl = live.data?.control_mode === "human_control" && live.data.focused_run_id === run.id;
   const openRun = (nextRun: Run) => { onSelect(nextRun); if (nextRun.status !== "terminal") action.mutate(() => api.focus(nextRun.id)); };
   const takeControl = () => action.mutate(async () => { await api.focus(run.id); return api.takeControl(run.id); });
@@ -195,18 +176,17 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
   const browser = <BrowserPanel run={run} live={live.data} busy={action.isPending} returning={returningControl} onFocus={() => action.mutate(() => api.focus(run.id))} onControl={takeControl} onReturn={() => { setReturningControl(true); action.mutate(() => api.returnControl(run.id), { onSuccess: () => setReturningControl(false), onError: () => setReturningControl(false) }); }} onClose={() => action.mutate(() => api.closeBrowser(run.id))}/>;
   const sendContext = (content: string) => action.mutate(() => api.sendContext(run.id, content), { onSuccess: () => toast.success("Steering context delivered to the active agent") });
   const context = <RunContext run={run} onCancel={() => action.mutate(() => api.cancel(run.id))} onOpenSubagents={() => setSubagentsOpen(true)}/>;
-  const conversation = <AgentConversation run={run} events={events.data ?? []} pendingRequests={pendingRequests} busy={action.isPending} onSendContext={sendContext} onStop={() => action.mutate(() => api.cancel(run.id), { onSuccess: () => toast.success("Run stopped") })} onAnswer={(requestId, answer) => action.mutate(() => api.answer(run.id, requestId, answer), { onSuccess: () => { refresh(); toast.success("Answer delivered to the agent"); } })}/>;
-  const humanPanels = pendingRequests.map((request) => <HumanPanel key={request.request_id} run={run} request={request} busy={respondingIds.has(request.request_id)} human={humanControl} onControl={takeControl} onAnswer={(answer) => submitResponse(request, answer)} onDecision={(decision) => submitResponse(request, undefined, decision)}/>);
+  const conversation = <AgentConversation run={run} events={events.data ?? []} busy={action.isPending} onSendContext={sendContext} onStop={() => action.mutate(() => api.cancel(run.id), { onSuccess: () => toast.success("Run stopped") })} onAnswer={(requestId, answer) => action.mutate(() => api.answer(run.id, requestId, answer), { onSuccess: () => { refresh(); toast.success("Answer delivered to the agent"); } })} onDecide={(requestId, decision) => action.mutate(() => api.decide(run.id, requestId, decision), { onSuccess: () => { refresh(); toast.success(decision === "approve" ? "Submission approved" : "Submission rejected"); } })}/>;
   const subagents = subagentsOpen ? <AgentsDrawer runId={run.id} events={events.data ?? []} onClose={() => setSubagentsOpen(false)} /> : null;
 
-  if (!desktop) return <main className="grid h-[calc(100dvh_-_3.75rem)] min-h-0 grid-rows-[minmax(0,1fr)_3.5rem] overflow-hidden bg-stone-100 dark:bg-zinc-950"><div className="min-h-0 overflow-hidden">{mobilePanel === "activity" && conversation}{mobilePanel === "browser" && <aside className="relative flex h-full min-h-0 flex-col overflow-hidden p-2">{browser}{humanPanels.length > 0 && <div className="pointer-events-none absolute inset-x-2 top-2 z-10 flex flex-col gap-2">{humanPanels}</div>}</aside>}{mobilePanel === "run" && <div className="h-full overflow-hidden">{context}</div>}</div><nav className="grid grid-cols-3 border-t border-stone-200 bg-white p-1.5 dark:border-zinc-800 dark:bg-zinc-950" aria-label="Run workspace"><MobileTab active={mobilePanel === "activity"} label="Activity" icon={<Bot size={16}/>} onClick={() => setMobilePanel("activity")}/><MobileTab active={mobilePanel === "browser"} label="Browser" icon={<Monitor size={16}/>} attention={pendingRequests.length > 0} onClick={() => setMobilePanel("browser")}/><MobileTab active={mobilePanel === "run"} label="Run" icon={<BriefcaseBusiness size={16}/>} onClick={() => setMobilePanel("run")}/></nav>{subagents}</main>;
+  if (!desktop) return <main className="grid h-[calc(100dvh_-_3.75rem)] min-h-0 grid-rows-[minmax(0,1fr)_3.5rem] overflow-hidden bg-stone-100 dark:bg-zinc-950"><div className="min-h-0 overflow-hidden">{mobilePanel === "activity" && conversation}{mobilePanel === "browser" && <aside className="relative flex h-full min-h-0 flex-col overflow-hidden p-2">{browser}</aside>}{mobilePanel === "run" && <div className="h-full overflow-hidden">{context}</div>}</div><nav className="grid grid-cols-3 border-t border-stone-200 bg-white p-1.5 dark:border-zinc-800 dark:bg-zinc-950" aria-label="Run workspace"><MobileTab active={mobilePanel === "activity"} label="Activity" icon={<Bot size={16}/>} onClick={() => setMobilePanel("activity")}/><MobileTab active={mobilePanel === "browser"} label="Browser" icon={<Monitor size={16}/>} onClick={() => setMobilePanel("browser")}/><MobileTab active={mobilePanel === "run"} label="Run" icon={<BriefcaseBusiness size={16}/>} onClick={() => setMobilePanel("run")}/></nav>{subagents}</main>;
 
   return <main className="h-[calc(100dvh_-_3.75rem)] min-h-0"><Group orientation="horizontal" className="h-full overflow-hidden" defaultLayout={layout.defaultLayout} onLayoutChanged={layout.onLayoutChanged}>
     <Panel id="context" panelRef={leftPanel} defaultSize={18} minSize={15} collapsible collapsedSize={0}><div className="flex h-full min-w-0 flex-col"><RunRail runs={runs} selected={run.id} onNew={onNew} onSelect={openRun} onCollapse={() => leftPanel.current?.collapse()}/>{context}</div></Panel>
     <ResizeHandle/>
     <Panel id="activity" defaultSize={34} minSize={25}>{conversation}</Panel>
     <ResizeHandle/>
-    <Panel id="workspace" panelRef={rightPanel} defaultSize={48} minSize={30} collapsible collapsedSize={0}><aside className="relative flex h-full min-w-0 flex-col overflow-hidden bg-stone-100 p-2 dark:bg-zinc-950">{browser}{humanPanels.length > 0 && <div className="pointer-events-none absolute inset-x-2 top-2 z-10 flex max-h-full flex-col gap-2 overflow-y-auto pr-1">{humanPanels}</div>}</aside></Panel>
+    <Panel id="workspace" panelRef={rightPanel} defaultSize={48} minSize={30} collapsible collapsedSize={0}><aside className="relative flex h-full min-w-0 flex-col overflow-hidden bg-stone-100 p-2 dark:bg-zinc-950">{browser}</aside></Panel>
   </Group>{!humanControl && <div className="fixed right-4 bottom-4 z-20 hidden gap-2 lg:flex"><PanelToggle label="Runs" onClick={() => leftPanel.current?.isCollapsed() ? leftPanel.current.expand() : leftPanel.current?.collapse()} icon={<PanelLeftClose size={15}/>}/><PanelToggle label="Browser" onClick={() => rightPanel.current?.isCollapsed() ? rightPanel.current.expand() : rightPanel.current?.collapse()} icon={<PanelRightClose size={15}/>}/></div>}{subagents}</main>;
 }
 
