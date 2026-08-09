@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight, RotateCcw } from "lucide-react";
+import { Bot, ChevronRight, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fmtTime, humanAgent } from "@/lib/format";
 import type { ModelClusterItem, ModelEntry, TimelineItem } from "@/lib/timeline/types";
@@ -12,20 +12,24 @@ function Meta({ occurredAt }: { occurredAt: string }) {
   );
 }
 
+const AGENT_TONES: Record<string, { avatar: string; icon: string; pill: string; label: string }> = {
+  running: { avatar: "bg-violet-100 dark:bg-violet-950/60", icon: "text-violet-600 dark:text-violet-300", pill: "bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300", label: "Running" },
+  completed: { avatar: "bg-emerald-100 dark:bg-emerald-950/60", icon: "text-emerald-600 dark:text-emerald-300", pill: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300", label: "Completed" },
+  failed: { avatar: "bg-rose-100 dark:bg-rose-950/60", icon: "text-rose-600 dark:text-rose-300", pill: "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300", label: "Failed" },
+};
+
 export function SectionDivider({ agent, status, occurredAt, parent }: { agent: string; status: string; occurredAt: string; parent?: string }) {
-  const tone =
-    status === "failed"
-      ? "text-rose-500"
-      : status === "completed"
-        ? "text-emerald-600"
-        : "text-violet-500";
+  const tone = AGENT_TONES[status] ?? AGENT_TONES.completed;
   return (
-    <div className="mb-5 mt-2 flex items-center gap-3">
-      <span className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
-      <span className="text-[13px] font-semibold tracking-tight text-zinc-800 dark:text-zinc-200">{humanAgent(agent)}</span>
-      {parent && <span className="hidden text-xs text-zinc-400 sm:inline dark:text-zinc-500">← from {humanAgent(parent)}</span>}
-      <span className={cn("text-xs font-medium capitalize", tone)}>{status}</span>
-      <span className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
+    <div className="mb-4 mt-7 flex items-center gap-3 rounded-xl border border-zinc-200/70 bg-zinc-50/80 px-3.5 py-2.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
+      <span className={cn("grid size-9 shrink-0 place-items-center rounded-lg", tone.avatar)}>
+        <Bot size={17} className={tone.icon} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{humanAgent(agent)}</p>
+        {parent && <p className="truncate text-xs text-zinc-400 dark:text-zinc-500">subagent of {humanAgent(parent)}</p>}
+      </div>
+      <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold", tone.pill)}>{tone.label}</span>
       <Meta occurredAt={occurredAt} />
     </div>
   );

@@ -10,9 +10,9 @@ export function AgentAvatar({ streaming = false }: { streaming?: boolean }) {
   return (
     <span
       className={cn(
-        "grid size-9 shrink-0 place-items-center rounded-full shadow-sm",
+        "grid size-9 shrink-0 place-items-center rounded-xl shadow-sm",
         streaming
-          ? "bg-violet-100 text-violet-600 ring-1 ring-violet-200 dark:bg-violet-950/70 dark:text-violet-300 dark:ring-violet-900"
+          ? "bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white ring-2 ring-violet-200 dark:ring-violet-900"
           : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800/80 dark:text-zinc-400",
       )}
     >
@@ -73,12 +73,16 @@ export function TurnMessage({ item }: { item: TurnItem }) {
   const hasReasoning = Boolean(item.reasoning.trim());
   if (!hasProse && !hasReasoning) return null;
   return (
-    <div className="mb-7 flex items-start gap-3.5">
+    <div className="mb-6 flex items-start gap-3.5">
       <AgentAvatar />
       <div className="min-w-0 flex-1">
         <div className="mb-1.5 flex items-baseline gap-2.5 px-0.5">
           <span className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{humanAgent(item.agent)}</span>
-          {item.model && <span className="truncate text-xs text-zinc-400 dark:text-zinc-500">{item.model}</span>}
+          {item.model && (
+            <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+              {item.model}
+            </span>
+          )}
           <time className="ml-auto shrink-0 text-xs tabular-nums text-zinc-400 dark:text-zinc-500" title={`event #${item.seq}`}>
             {fmtTime(item.occurredAt)}
           </time>
