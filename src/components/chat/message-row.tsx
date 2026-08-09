@@ -221,28 +221,44 @@ function ModelLine({ entry }: { entry: ModelEntry }) {
   );
 }
 
-/** HITL handoff: quiet amber card (no border), question + answer. */
+/** HITL checkpoint as a conversational exchange: the agent's question appears
+ * like an assistant message and the user's answer as a right-aligned user
+ * bubble — the Claude/ChatGPT pattern that makes checkpoints feel like part
+ * of the thread, not a separate log. */
 export function HumanHandoffCard({ item }: { item: Extract<TimelineItem, { kind: "human" }> }) {
+  const question = item.question || item.detail || "The agent needs your input";
+  const answer = item.answer;
   return (
-    <div className="mb-2 rounded-xl bg-amber-50/80 px-3.5 py-2.5 dark:bg-amber-950/15">
+    <div className="mb-4">
       <div className="flex items-start gap-2.5">
-        <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300">
+        <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-lg bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300">
           <HelpCircle size={12} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-medium text-amber-900 dark:text-amber-100">{item.question || "You were asked"}</p>
-          {item.answer ? (
-            <p className="mt-0.5 text-[12.5px] text-amber-800/90 dark:text-amber-200/90">
-              Your answer: <span className="font-medium">{item.answer}</span>
-            </p>
-          ) : (
-            <p className="mt-0.5 text-[12.5px] text-amber-700/80 dark:text-amber-200/70">Waiting for your answer…</p>
-          )}
+          <p className="text-[13px] leading-relaxed text-zinc-800 dark:text-zinc-200">{question}</p>
+          <time className="mt-0.5 block text-[10.5px] tabular-nums text-zinc-400 dark:text-zinc-500">
+            {fmtTime(item.occurredAt)}
+          </time>
         </div>
-        <time className="shrink-0 text-[11px] tabular-nums text-amber-500/80 dark:text-amber-300/60" title={item.resolvedAt ? "resolved" : "requested"}>
-          {fmtTime(item.resolvedAt || item.occurredAt)}
-        </time>
       </div>
+      {answer ? (
+        <div className="mt-2 flex justify-end pl-10">
+          <div className="max-w-[80%]">
+            <p className="mb-0.5 pr-1 text-right text-[10.5px] font-medium text-zinc-400 dark:text-zinc-500">You</p>
+            <div className="rounded-2xl rounded-br-md bg-zinc-900 px-3.5 py-2 text-[13px] leading-relaxed text-white dark:bg-zinc-100 dark:text-zinc-900">
+              {answer}
+            </div>
+            <p className="mt-0.5 pr-1 text-right text-[10.5px] tabular-nums text-zinc-400 dark:text-zinc-500">
+              {item.resolvedAt ? fmtTime(item.resolvedAt) : ""}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-2 flex items-center gap-1.5 pl-9">
+          <span className="size-2.5 animate-pulse rounded-full border-[1.5px] border-amber-400 border-t-transparent" />
+          <span className="text-[12px] text-amber-600 dark:text-amber-300">Waiting for your answer…</span>
+        </div>
+      )}
     </div>
   );
 }
