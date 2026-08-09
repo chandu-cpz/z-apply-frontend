@@ -1,4 +1,4 @@
-import { Ban, BriefcaseBusiness, CheckCircle2, ExternalLink, PanelRight, Sparkles, XCircle } from "lucide-react";
+import { Ban, BriefcaseBusiness, CheckCircle2, ExternalLink, PanelRight, Sparkles, Timer, XCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
 import type { Artifact, Run } from "../types";
@@ -75,6 +75,11 @@ function SubmissionSuccess({ run }: { run: Run }) {
         <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Application submitted</span>
         <span className="ml-auto rounded-full bg-emerald-200/70 px-2 py-0.5 font-mono text-[10px] text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200">✓ verified</span>
       </div>
+      {durationLabel(run) && (
+        <p className="flex items-center gap-1.5 px-3.5 pb-2 font-mono text-[11px] text-emerald-700 dark:text-emerald-300">
+          <Timer size={12} /> took {durationLabel(run)}
+        </p>
+      )}
       {confirmation && (
         <a
           href={`/api/v1/artifacts/${confirmation.artifact_id}`}
@@ -106,6 +111,17 @@ function SubmissionSuccess({ run }: { run: Run }) {
       )}
     </div>
   );
+}
+
+function durationLabel(run: Run): string | null {
+  if (!run.started_at || !run.finished_at) return null;
+  const start = Date.parse(run.started_at);
+  const end = Date.parse(run.finished_at);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return null;
+  const seconds = Math.round((end - start) / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return minutes > 0 ? `${minutes}m ${rest}s` : `${rest}s`;
 }
 
 function byKind(artifacts: Artifact[] | undefined, kind: string): Artifact | undefined {
