@@ -162,6 +162,13 @@
   ::-webkit-scrollbar-corner {
     background: transparent;
   }
+  /* Sonner injects its own stylesheet with a system font stack on
+   * [data-sonner-toaster]; force the app-wide JetBrains Mono so toasts match
+   * the rest of the UI (title, description, action button). */
+  [data-sonner-toaster],
+  [data-sonner-toaster] * {
+    font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace !important;
+  }
 }
 
 @keyframes z-blink {
