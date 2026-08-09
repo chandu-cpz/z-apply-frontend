@@ -8,8 +8,7 @@ import type { ActivityEvent, Run } from "@/types";
 import { useLiveStore } from "@/live-store";
 import { LiveAssistant, TurnMessage } from "./message-assistant";
 import { ToolMessage } from "./message-tool";
-import { ActivityGroup, HumanHandoffCard, ModelClusterRowCard, RecoveryRow, RunLabel, SectionDivider, SystemRow } from "./message-row";
-import { flattenTimeline, groupRows, isQuiet, rowKey, type ChatRow } from "./rows";
+import { ActivityGroup, HumanHandoffCard, ModelClusterRowCard, RecoveryRow, RunLabel, SectionDivider, SystemRow } from "./message-row";import { flattenTimeline, groupRows, isQuiet, rowKey, type ChatRow } from "./rows";
 
 const FOLLOW_THRESHOLD_PX = 80;
 
@@ -21,8 +20,52 @@ function hostname(url: string): string {
   }
 }
 
-/** Chat header: the run's identity + status. Replaces the "queued/started/phase"
- * event spam at the top of a run with one calm card. */
+/** Telemetry as pills, not events: only what a human would care about.
+ * No run lifecycle, no model selection (the message header shows the model),
+ * no page/phase events. Just: authenticated, interruptions, checkpoints,
+ * warnings. */
+function ActivityStrip({ activity }: { activity: ChatRow[] }) {
+  const pills = useMemo(() => {
+    let interruptions = 0;
+    let checkpoints = 0;
+    let notices = 0;
+    let authenticated = false;
+    for (const row of activity) {
+      if (row.kind === "model-cluster") continue;
+      if (row.kind !== "row") continue;
+      const item = row.item;
+      if (item.kind === "recovery") interruptions += 1;
+      else if (item.kind === "human") checkpoints += 1;
+      else if (item.kind === "notice") notices += 1;
+      else if (item.kind === "auth" && item.status === "completed") authenticated = true;
+    }
+    const list: Array<{ label: string; cls: string }> = [];
+    if (authenticated) {
+      list.push({ label: "authenticated", cls: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300" });
+    }
+    if (interruptions > 0) {
+      list.push({ label: `${interruptions} interruption${interruptions > 1 ? "s" : ""}`, cls: "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300" });
+    }
+    if (checkpoints > 0) {
+      list.push({ label: `${checkpoints} checkpoint${checkpoints > 1 ? "s" : ""} answered`, cls: "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400" });
+    }
+    if (notices > 0) {
+      list.push({ label: `${notices} warning${notices > 1 ? "s" : ""}`, cls: "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300" });
+    }
+    return list;
+  }, [activity]);
+  if (pills.length === 0) return null;
+  return (
+    <div className="mb-5 flex flex-wrap items-center gap-1.5">
+      {pills.map((pill) => (
+        <span key={pill.label} className={cn("rounded-full px-2.5 py-0.5 text-[10.5px] font-medium", pill.cls)}>
+          {pill.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function RunHeader({ run }: { run: Run }) {
   const submitted = run.outcome === "submitted_verified";
   const failed = run.status === "terminal" && !submitted && run.outcome !== "cancelled";
@@ -147,9 +190,7 @@ export function MessageList({ runId, events, run }: { runId: string; events: Act
       <div ref={scrollRef} onScroll={onScroll} className="min-h-0 flex-1 overflow-y-auto overscroll-contain" role="log" aria-live="polite">
         <div className="mx-auto w-full max-w-[700px] px-5 py-7">
           <RunHeader run={run} />
-          {activity.length > 0 && (
-            <ActivityGroup group={{ kind: "activity-group", seq: 0, children: activity }} />
-          )}
+          <ActivityStrip activity={activity} />
           {rows.length === 0 && <EmptyState />}
           {rows.map((row) => (
             <div key={rowKey(row)}>

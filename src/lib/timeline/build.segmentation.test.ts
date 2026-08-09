@@ -270,3 +270,30 @@ describe("buildTimeline segmentation", () => {
     expect(top[0].agent).toBe("AnswerWriter");
   });
 });
+
+describe("buildTimeline human pairing", () => {
+  it("pairs requested with the next resolved even when events interleave", () => {
+    const events = [
+      ev(1, "human.requested", "core", { question: "Available to join?" }),
+      ev(2, "model.selected", "orchestrator", { model_id: "acme/x", role: "orchestrator" }),
+      ev(3, "human.resolved", "core", { answer: "Immediately" }),
+    ];
+    const items = buildTimeline(events);
+    const humans = items.filter((item) => item.kind === "human") as Array<Extract<TimelineItem, { kind: "human" }>>;
+    expect(humans).toHaveLength(1);
+    expect(humans[0].sub).toBe("handoff");
+    expect(humans[0].question).toBe("Available to join?");
+    expect(humans[0].answer).toBe("Immediately");
+  });
+
+  it("keeps an unanswered request unpaired", () => {
+    const events = [
+      ev(1, "human.requested", "core", { question: "Need a fact?" }),
+      ev(2, "run.cancel_requested", "core", {}),
+    ];
+    const items = buildTimeline(events);
+    const humans = items.filter((item) => item.kind === "human") as Array<Extract<TimelineItem, { kind: "human" }>>;
+    expect(humans).toHaveLength(1);
+    expect(humans[0].sub).toBe("requested");
+  });
+});
