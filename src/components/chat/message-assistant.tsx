@@ -88,7 +88,11 @@ export function TurnMessage({ item }: { item: TurnItem }) {
           </time>
         </div>
         {hasReasoning && <ThinkingStrip reasoning={item.reasoning} />}
-        {hasProse && <AssistantText text={item.text} streaming={false} />}
+        {hasProse && (
+          <div className="rounded-xl border border-zinc-200/70 bg-white/70 px-3.5 py-2.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
+            <AssistantText text={item.text} streaming={false} />
+          </div>
+        )}
         {item.toolCalls.length > 0 && (
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
             {item.toolCalls.map((tool, index) => (
