@@ -11,40 +11,28 @@ export function AgentAvatar({ streaming = false }: { streaming?: boolean }) {
   return (
     <span
       className={cn(
-        "grid size-9 shrink-0 place-items-center rounded-xl shadow-sm",
+        "grid size-7 shrink-0 place-items-center rounded-lg",
         streaming
-          ? "bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white ring-2 ring-violet-200 dark:ring-violet-900"
-          : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800/80 dark:text-zinc-400",
+          ? "bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white"
+          : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800/80 dark:text-zinc-500",
       )}
     >
-      <Sparkles size={16} />
+      <Sparkles size={13} />
     </span>
   );
 }
 
-function LiveChips({ agent }: { agent: LiveAgent }) {
+/** Live metrics as quiet dot-separated text — no pills. */
+function LiveMeta({ agent }: { agent: LiveAgent }) {
   const metrics = agent.metrics;
   if (!metrics) return null;
-  const chips: Array<{ label: string; title?: string }> = [];
-  if (metrics.model) chips.push({ label: humanModel(metrics.model), title: metrics.model });
-  if (metrics.provider) chips.push({ label: metrics.provider });
-  if (metrics.ttftMs > 0) chips.push({ label: `TTFT ${fmtDur(metrics.ttftMs)}` });
-  if (metrics.tokPerSecond > 0) chips.push({ label: `${metrics.tokPerSecond.toFixed(0)} tok/s` });
-  if (metrics.outputTokens > 0) chips.push({ label: `~${fmtNum(metrics.outputTokens)} tok` });
-  if (chips.length === 0) return null;
-  return (
-    <span className="flex flex-wrap items-center gap-1.5">
-      {chips.map((chip) => (
-        <span
-          key={chip.label}
-          title={chip.title}
-          className="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 font-mono text-[11px] tabular-nums text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400"
-        >
-          {chip.label}
-        </span>
-      ))}
-    </span>
-  );
+  const parts: string[] = [];
+  if (metrics.model) parts.push(humanModel(metrics.model));
+  if (metrics.ttftMs > 0) parts.push(`ttft ${fmtDur(metrics.ttftMs)}`);
+  if (metrics.tokPerSecond > 0) parts.push(`${metrics.tokPerSecond.toFixed(0)} tok/s`);
+  if (metrics.outputTokens > 0) parts.push(`~${fmtNum(metrics.outputTokens)} tok`);
+  if (parts.length === 0) return null;
+  return <span className="hidden text-[11px] tabular-nums text-zinc-400 sm:inline dark:text-zinc-500">{parts.join(" · ")}</span>;
 }
 
 function ThinkingStrip({
@@ -58,23 +46,27 @@ function ThinkingStrip({
 }) {
   const [open, setOpen] = useState(true);
   if (!reasoning && !streaming) return null;
-  const caption = streaming ? "Thinking…" : durationMs && durationMs > 0 ? `Thought · ${fmtDur(durationMs)}` : "Thought";
+  const caption = streaming
+    ? "Thinking…"
+    : durationMs && durationMs > 0
+      ? `Thought · ${fmtDur(durationMs)}`
+      : "Thought";
   return (
-    <div className="mb-3 overflow-hidden rounded-xl border border-violet-200/70 bg-violet-50/50 dark:border-violet-900/40 dark:bg-violet-950/15">
+    <div className="mb-2.5">
       <button
         type="button"
-        className={cn("flex w-full items-center gap-2 px-3 py-2 text-left", open ? "" : "hover:bg-violet-100/40 dark:hover:bg-violet-900/20")}
         onClick={() => setOpen((value) => !value)}
+        className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-left hover:bg-zinc-100/70 dark:hover:bg-zinc-800/50"
         aria-expanded={open}
       >
         {streaming ? (
-          <span className="size-3 shrink-0 animate-pulse rounded-full border-2 border-violet-400 border-t-transparent" />
+          <span className="size-2.5 shrink-0 animate-pulse rounded-full border-[1.5px] border-violet-400 border-t-transparent" />
         ) : (
-          <ChevronRight size={13} className={cn("shrink-0 text-violet-400 transition-transform", open && "rotate-90")} />
+          <ChevronRight size={12} className={cn("shrink-0 text-zinc-300 transition-transform dark:text-zinc-500", open && "rotate-90")} />
         )}
-        <span className="text-xs font-medium text-violet-600 dark:text-violet-300">{caption}</span>
+        <span className="text-[12px] text-zinc-500 dark:text-zinc-400">{caption}</span>
         {!streaming && reasoning && (
-          <span className="ml-auto hidden truncate text-xs text-violet-400/80 sm:inline dark:text-violet-300/60">{reasoning.slice(0, 72)}</span>
+          <span className="hidden max-w-64 truncate text-[11px] text-zinc-400 sm:inline dark:text-zinc-500">{reasoning}</span>
         )}
       </button>
       <AnimatePresence initial={false}>
@@ -84,13 +76,13 @@ function ThinkingStrip({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
             className="overflow-hidden"
           >
-            <pre className="max-h-72 overflow-auto border-t border-violet-200/60 px-3 py-2.5 font-mono text-[13px] leading-relaxed whitespace-pre-wrap text-zinc-600 dark:border-violet-900/40 dark:text-zinc-300">
+            <div className="mt-1 ml-1.5 max-h-80 overflow-auto rounded-lg bg-zinc-50/90 px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap text-zinc-500 dark:bg-zinc-900/60 dark:text-zinc-400">
               {reasoning}
               {streaming && <span className="animate-pulse text-violet-500">▍</span>}
-            </pre>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -116,8 +108,34 @@ function AssistantText({ text, streaming }: { text: string; streaming: boolean }
         <ReactMarkdown>{text}</ReactMarkdown>
       </div>
       {streaming && (
-        <span className="ml-0.5 inline-block h-[1.05em] w-[3px] translate-y-[2px] animate-z-blink rounded-[1px] bg-zinc-600 dark:bg-zinc-300" aria-hidden />
+        <span className="ml-0.5 inline-block h-[1.05em] w-[2.5px] translate-y-[2px] animate-z-blink rounded-[1px] bg-zinc-600 dark:bg-zinc-300" aria-hidden />
       )}
+    </div>
+  );
+}
+
+function MessageHeader({ agent, model, streaming, occurredAt, seq, liveMeta }: {
+  agent: string;
+  model?: string;
+  streaming?: boolean;
+  occurredAt: string;
+  seq?: number;
+  liveMeta?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-1 flex items-baseline gap-2 px-0.5">
+      <span className="text-[13.5px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{humanAgent(agent)}</span>
+      {model && <span className="truncate text-[11px] text-zinc-400 dark:text-zinc-500">{humanModel(model)}</span>}
+      {streaming && (
+        <span className="flex shrink-0 items-center gap-1 text-[11px] text-violet-500 dark:text-violet-300">
+          <span className="size-1 animate-pulse rounded-full bg-violet-500" />
+          streaming
+        </span>
+      )}
+      {liveMeta}
+      <time className="ml-auto shrink-0 text-[11px] tabular-nums text-zinc-400 dark:text-zinc-500" title={seq !== undefined ? `event #${seq}` : undefined}>
+        {fmtTime(occurredAt)}
+      </time>
     </div>
   );
 }
@@ -127,26 +145,18 @@ export function TurnMessage({ item }: { item: TurnItem }) {
   const hasReasoning = Boolean(item.reasoning.trim());
   if (!hasProse && !hasReasoning) return null;
   return (
-    <div className="mb-6 flex items-start gap-3.5">
-      <AgentAvatar />
+    <div className="mb-6 flex items-start gap-2.5">
+      <div className="pt-0.5">
+        <AgentAvatar />
+      </div>
       <div className="min-w-0 flex-1">
-        <div className="mb-1.5 flex items-baseline gap-2.5 px-0.5">
-          <span className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{humanAgent(item.agent)}</span>
-          {item.model && (
-            <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-              {humanModel(item.model)}
-            </span>
-          )}
-          <time className="ml-auto shrink-0 text-xs tabular-nums text-zinc-400 dark:text-zinc-500" title={`event #${item.seq}`}>
-            {fmtTime(item.occurredAt)}
-          </time>
-        </div>
+        <MessageHeader agent={item.agent} model={item.model} occurredAt={item.occurredAt} seq={item.seq} />
         {hasReasoning && <ThinkingStrip reasoning={item.reasoning} durationMs={item.usage.durationMs} />}
         {hasProse && <AssistantText text={item.text} streaming={false} />}
         {item.toolCalls.length > 0 && (
-          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
             {item.toolCalls.map((tool, index) => (
-              <span key={`${tool.id || tool.name || index}`} className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 font-mono text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800/70 dark:text-zinc-300">
+              <span key={`${tool.id || tool.name || index}`} className="rounded-full bg-zinc-100 px-2 py-0.5 font-mono text-[11px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                 {tool.name || "tool"}
               </span>
             ))}
@@ -164,22 +174,19 @@ export const LiveAssistant = memo(function LiveAssistant({ agent }: { agent: Liv
   const tools = [...agent.toolCalls.entries()].map(([index, call]) => ({ index, id: call.id, name: call.name }));
   const waiting = streaming && !agent.text && !agent.reasoning && tools.length === 0;
   return (
-    <div className="mb-7 flex items-start gap-3.5">
-      <AgentAvatar streaming={streaming} />
+    <div className="mb-6 flex items-start gap-2.5">
+      <div className="pt-0.5">
+        <AgentAvatar streaming={streaming} />
+      </div>
       <div className="min-w-0 flex-1">
-        <div className="mb-1.5 flex items-baseline gap-2.5 px-0.5">
-          <span className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{humanAgent(agent.agent)}</span>
-          {streaming && (
-            <span className="flex items-center gap-1.5 text-xs font-medium text-violet-500 dark:text-violet-300">
-              <span className="size-1.5 animate-pulse rounded-full bg-violet-500" />
-              streaming
-            </span>
-          )}
-          <LiveChips agent={agent} />
-          <time className="ml-auto shrink-0 text-xs tabular-nums text-zinc-400 dark:text-zinc-500" title={`event #${agent.firstSeq}`}>
-            {fmtTime(agent.occurredAt)}
-          </time>
-        </div>
+        <MessageHeader
+          agent={agent.agent}
+          model={agent.metrics?.model}
+          streaming={streaming}
+          occurredAt={agent.occurredAt}
+          seq={agent.firstSeq}
+          liveMeta={<LiveMeta agent={agent} />}
+        />
         {waiting && (
           <>
             <style>{`
@@ -204,17 +211,17 @@ export const LiveAssistant = memo(function LiveAssistant({ agent }: { agent: Liv
               }
             `}</style>
             <div className="flex flex-col gap-2 py-1" aria-label="thinking">
-              <div className="z-shimmer-line h-3 w-11/12 rounded-full" />
-              <div className="z-shimmer-line h-3 w-8/12 rounded-full" />
-              <div className="z-shimmer-line h-3 w-10/12 rounded-full" />
+              <div className="z-shimmer-line h-2.5 w-11/12 rounded-full" />
+              <div className="z-shimmer-line h-2.5 w-8/12 rounded-full" />
+              <div className="z-shimmer-line h-2.5 w-10/12 rounded-full" />
             </div>
           </>
         )}
         <ThinkingStrip reasoning={agent.reasoning} streaming={streaming} durationMs={agent.metrics?.durationMs} />
         {tools.length > 0 && (
-          <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
+          <div className="mb-2 flex flex-wrap items-center gap-1.5">
             {tools.map((tool) => (
-              <span key={`${tool.index}-${tool.id}`} className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 font-mono text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800/70 dark:text-zinc-300">
+              <span key={`${tool.index}-${tool.id}`} className="rounded-full bg-zinc-100 px-2 py-0.5 font-mono text-[11px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                 {tool.name || `tool ${tool.index}`}
               </span>
             ))}
@@ -222,8 +229,8 @@ export const LiveAssistant = memo(function LiveAssistant({ agent }: { agent: Liv
         )}
         {agent.text && <AssistantText text={agent.text} streaming={streaming} />}
         {!agent.text && !agent.reasoning && tools.length === 0 && (
-          <p className="flex items-center gap-1.5 text-sm text-zinc-400 dark:text-zinc-500">
-            <span className="size-3 animate-pulse rounded-full border-2 border-violet-400 border-t-transparent" />
+          <p className="flex items-center gap-1.5 text-[13px] text-zinc-400 dark:text-zinc-500">
+            <span className="size-2.5 animate-pulse rounded-full border-[1.5px] border-violet-400 border-t-transparent" />
             streaming…
           </p>
         )}

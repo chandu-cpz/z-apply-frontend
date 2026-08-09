@@ -40,8 +40,8 @@ export function RowRenderer({ row }: { row: ChatRow }) {  switch (row.kind) {
 
 function EmptyState() {
   return (
-    <div className="grid place-items-center px-6 py-20 text-center">
-      <p className="max-w-sm text-[15px] leading-relaxed text-zinc-400 dark:text-zinc-500">
+    <div className="grid place-items-center px-6 py-24 text-center">
+      <p className="max-w-sm text-sm leading-relaxed text-zinc-400 dark:text-zinc-500">
         Live reasoning, tool calls and agent activity will stream here.
       </p>
     </div>
@@ -88,7 +88,7 @@ export function MessageList({ runId, events, run }: { runId: string; events: Act
   return (
     <section className="relative flex h-full min-h-0 flex-col bg-background">
       <div ref={scrollRef} onScroll={onScroll} className="min-h-0 flex-1 overflow-y-auto overscroll-contain" role="log" aria-live="polite">
-        <div className="mx-auto w-full max-w-[760px] px-5 py-6">
+        <div className="mx-auto w-full max-w-[700px] px-5 py-7">
           {rows.length === 0 && <EmptyState />}
           {rows.map((row) => (
             <div key={rowKey(row)}>

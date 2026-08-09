@@ -34,7 +34,7 @@ export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCan
       </div>
 
       <div className="rounded-xl border border-border bg-card p-3.5">
-        <p className="font-mono text-[11px] tracking-[.12em] text-muted-foreground uppercase">Run objective</p>
+        <p className="text-[11px] font-medium text-muted-foreground">Run objective</p>
         <p className="mt-2 text-[13px] leading-relaxed text-foreground/90">
           {run.task || "Complete the application carefully, verify it, and request approval before submission."}
         </p>
@@ -43,7 +43,7 @@ export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCan
       <RunStats runId={run.id} />
 
       <div className="px-1">
-        <p className="font-mono text-[11px] tracking-[.12em] text-muted-foreground uppercase">Current activity</p>
+        <p className="text-[11px] font-medium text-muted-foreground">Current activity</p>
         <div className="mt-2 flex items-center gap-2 text-sm text-foreground"><Sparkles className="text-violet-500" size={15} /><span className="truncate capitalize">{run.current_agent || "Orchestrator"}</span></div>
         <p className="mt-1 pl-6 text-[13px] capitalize text-muted-foreground">{run.phase.replaceAll("_", " ")}</p>
         <button
@@ -153,10 +153,10 @@ function RunStats({ runId }: { runId: string }) {
   if (calls === 0) return null;
   const cell = "rounded-lg border border-border bg-card px-2 py-1.5";
   const value = "block font-mono text-[13px] font-semibold text-foreground";
-  const label = "block text-[9px] font-mono uppercase tracking-[.1em] text-muted-foreground";
+  const label = "block text-[10px] text-muted-foreground";
   return (
     <div className="rounded-xl border border-border bg-card p-3">
-      <p className="font-mono text-[11px] tracking-[.12em] text-muted-foreground uppercase">Run stats</p>
+      <p className="text-[11px] font-medium text-muted-foreground">Run stats</p>
       <div className="mt-2 grid grid-cols-3 gap-1.5">
         <div className={cell}><span className={value}>{calls}</span><span className={label}>calls</span></div>
         <div className={cell}><span className={value}>{fmtCompact(inTokens)}</span><span className={label}>in tokens</span></div>
