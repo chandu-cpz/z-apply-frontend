@@ -20,16 +20,18 @@ const AGENT_TONES: Record<string, { avatar: string; icon: string; pill: string; 
 
 export function SectionDivider({ agent, status, occurredAt, parent }: { agent: string; status: string; occurredAt: string; parent?: string }) {
   const tone = AGENT_TONES[status] ?? AGENT_TONES.completed;
+  // Claude-style hairline separator: a quiet top rule with a compact agent
+  // header instead of a boxed card.
   return (
-    <div className="mb-4 mt-7 flex items-center gap-3 rounded-xl border border-zinc-200/70 bg-zinc-50/80 px-3.5 py-2.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
-      <span className={cn("grid size-9 shrink-0 place-items-center rounded-lg", tone.avatar)}>
-        <Bot size={17} className={tone.icon} />
+    <div className="mt-8 mb-4 flex items-center gap-3 border-t border-zinc-200/70 pt-4 dark:border-zinc-800/80">
+      <span className={cn("grid size-7 shrink-0 place-items-center rounded-lg", tone.avatar)}>
+        <Bot size={14} className={tone.icon} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{humanAgent(agent)}</p>
+        <p className="truncate text-[13.5px] font-semibold tracking-tight text-zinc-800 dark:text-zinc-200">{humanAgent(agent)}</p>
         {parent && <p className="truncate text-xs text-zinc-400 dark:text-zinc-500">subagent of {humanAgent(parent)}</p>}
       </div>
-      <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold", tone.pill)}>{tone.label}</span>
+      <span className={cn("shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-medium", tone.pill)}>{tone.label}</span>
       <Meta occurredAt={occurredAt} />
     </div>
   );

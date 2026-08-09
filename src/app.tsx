@@ -11,7 +11,7 @@ import { HumanPanel } from "./components/human-panel";
 import { RunContext } from "./components/run-context";
 import { RunRail } from "./components/run-tabs";
 import { StartRun } from "./components/start-run";
-import { useEventStream } from "./hooks";
+import { useEventStream, useLiveEventStream } from "./hooks";
 import { type Route, useRoute } from "./routes";
 import { ArtifactsScreen } from "./screens/artifacts-screen";
 import { DiagnosticsScreen } from "./screens/diagnostics-screen";
@@ -25,6 +25,7 @@ export function App() {
   const [route, navigate] = useRoute();
   const theme = useUiStore((state) => state.theme);
   const streamStatus = useEventStream();
+  useLiveEventStream();
   const runs = useQuery({ queryKey: ["runs"], queryFn: api.runs, refetchInterval: 5_000 });
   const notifiedRuns = useRef(new Set<string>());
   const routeRunId = route.name === "run" ? route.runId : "";
@@ -139,7 +140,7 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
   const browser = <BrowserPanel run={run} live={live.data} busy={action.isPending} returning={returningControl} onFocus={() => action.mutate(() => api.focus(run.id))} onControl={takeControl} onReturn={() => { setReturningControl(true); action.mutate(() => api.returnControl(run.id), { onSuccess: () => setReturningControl(false), onError: () => setReturningControl(false) }); }} onClose={() => action.mutate(() => api.closeBrowser(run.id))}/>;
   const sendContext = (content: string) => action.mutate(() => api.sendContext(run.id, content), { onSuccess: () => toast.success("Steering context delivered to the active agent") });
   const context = <RunContext run={run} onCancel={() => action.mutate(() => api.cancel(run.id))} onOpenSubagents={() => setSubagentsOpen(true)}/>;
-  const conversation = <AgentConversation run={run} events={events.data ?? []} pendingRequests={pendingRequests} busy={action.isPending} onSendContext={sendContext}/>;
+  const conversation = <AgentConversation run={run} events={events.data ?? []} pendingRequests={pendingRequests} busy={action.isPending} onSendContext={sendContext} onStop={() => action.mutate(() => api.cancel(run.id), { onSuccess: () => toast.success("Run stopped") })}/>;
   const humanPanels = pendingRequests.map((request) => <HumanPanel key={request.request_id} run={run} request={request} busy={respondingIds.has(request.request_id)} human={humanControl} onControl={takeControl} onAnswer={(answer) => submitResponse(request, answer)} onDecision={(decision) => submitResponse(request, undefined, decision)}/>);
   const subagents = subagentsOpen ? <AgentsDrawer runId={run.id} events={events.data ?? []} onClose={() => setSubagentsOpen(false)} /> : null;
 

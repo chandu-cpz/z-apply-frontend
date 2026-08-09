@@ -70,6 +70,33 @@ export const liveViewSchema = z.object({
   focused_run_id: z.string().nullable(),
 });
 
+export const callLedgerSchema = z.object({
+  run_id: z.string(),
+  totals: z.object({
+    calls: z.number().int(),
+    input_tokens: z.number().int(),
+    output_tokens: z.number().int(),
+    cache_read_tokens: z.number().int(),
+    cost_usd: z.number(),
+  }),
+  calls: z.array(
+    z.object({
+      sequence: z.number().int(),
+      agent: z.string(),
+      model: z.string(),
+      provider: z.string(),
+      input_tokens: z.number().int(),
+      output_tokens: z.number().int(),
+      cache_read_tokens: z.number().int(),
+      ttft_ms: z.number().nullable(),
+      duration_ms: z.number().nullable(),
+      tok_per_second: z.number().nullable(),
+      cost_usd: z.number().nullable(),
+      occurred_at: z.string(),
+    })
+  ),
+});
+
 export const artifactSchema = z.object({
   artifact_id: z.string(),
   run_id: z.string(),

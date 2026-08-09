@@ -17,7 +17,7 @@ export function ToolMessage({ item }: { item: ToolItem }) {
     <CheckCircle2 size={15} className="shrink-0 text-emerald-500" />
   );
   return (
-    <div className={cn("mb-3 rounded-xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900")}>
+    <div className={cn("mb-3 overflow-hidden rounded-xl border border-zinc-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900")}>
       <div className="flex items-center gap-2.5 px-3.5 py-2.5">
         {icon}
         <span className="truncate font-mono text-[13px] font-medium text-zinc-800 dark:text-zinc-200">{item.name.replaceAll("_", " ")}</span>

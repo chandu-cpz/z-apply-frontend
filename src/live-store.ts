@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import type { LiveActivityEvent } from "./types";
 
-const FLUSH_MS = 80;
 const MAX_EVENTS_PER_RUN = 600;
+const MAX_PENDING = 2000;
 
 interface LiveStore {
   byRun: Record<string, LiveActivityEvent[]>;
@@ -12,12 +12,22 @@ interface LiveStore {
 }
 
 let pending: LiveActivityEvent[] = [];
-let flushTimer: ReturnType<typeof setTimeout> | null = null;
+let rafId: ReturnType<typeof setTimeout> | null = null;
 
 type SetState = (updater: (state: LiveStore) => Partial<LiveStore>) => void;
 
+/** One store commit per animation frame at most: token deltas arrive far
+ * faster than the display can paint, and committing per event would trigger
+ * hundreds of re-renders per second (see Chrome's "Best practices to render
+ * streamed LLM responses"). rAF also naturally pauses in hidden tabs. */
+function frame(callback: () => void): ReturnType<typeof setTimeout> {
+  return typeof requestAnimationFrame === "function"
+    ? (requestAnimationFrame(callback) as unknown as ReturnType<typeof setTimeout>)
+    : setTimeout(callback, 16);
+}
+
 function flush(set: SetState): void {
-  flushTimer = null;
+  rafId = null;
   if (pending.length === 0) return;
   const batch = pending;
   pending = [];
@@ -37,14 +47,23 @@ function flush(set: SetState): void {
   });
 }
 
+function scheduleFlush(set: SetState): void {
+  if (rafId !== null) return;
+  rafId = frame(() => flush(set));
+}
+
 export const useLiveStore = create<LiveStore>((set) => ({
   byRun: {},
   lastSeqByRun: {},
   push: (event) => {
     pending.push(event);
-    if (flushTimer === null) {
-      flushTimer = setTimeout(() => flush(set), FLUSH_MS);
+    if (pending.length > MAX_PENDING) {
+      // Hidden-tab safety: rAF does not fire in background tabs, so bound the
+      // pending queue and drop the oldest deltas (tokens are ephemeral; the
+      // durable turn text repairs the UI on the next turn boundary).
+      pending.splice(0, pending.length - MAX_PENDING);
     }
+    scheduleFlush(set);
   },
   clearRun: (runId) => {
     pending = pending.filter((event) => event.run_id !== runId);

@@ -141,3 +141,10 @@
 @utility animate-z-blink {
   animation: z-blink 1.1s step-end infinite;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-z-blink,
+  .z-shimmer-line {
+    animation: none !important;
+  }
+}

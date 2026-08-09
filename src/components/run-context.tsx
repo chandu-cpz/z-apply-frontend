@@ -1,12 +1,15 @@
-import { Ban, BriefcaseBusiness, CheckCircle2, ExternalLink, PanelRight, Sparkles, Timer, XCircle } from "lucide-react";
+import { Ban, BriefcaseBusiness, CheckCircle2, ExternalLink, PanelRight, ReceiptText, Sparkles, Timer, XCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../api";
 import { useModelPerformance } from "../lib/perf";
 import type { Artifact, Run } from "../types";
+import { CallsDrawer } from "./calls-drawer";
 
 export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCancel(): void; onOpenSubagents(): void }) {
   const submitted = run.outcome === "submitted_verified";
   const failed = run.status === "terminal" && !submitted && run.outcome !== "cancelled";
+  const [callsOpen, setCallsOpen] = useState(false);
   return (
     <aside className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto border-r border-border bg-muted/40 p-3 dark:bg-zinc-950">
       {submitted && <SubmissionSuccess run={run} />}
@@ -51,11 +54,20 @@ export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCan
           <PanelRight size={14} />
           Subagents
         </button>
+        <button
+          type="button"
+          onClick={() => setCallsOpen(true)}
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground shadow-sm hover:border-violet-300 hover:text-violet-700 dark:hover:border-violet-800 dark:hover:text-violet-300"
+        >
+          <ReceiptText size={14} />
+          LLM calls
+        </button>
       </div>
 
       {run.summary && <p className="max-h-28 overflow-hidden border-l-2 border-border pl-3 text-[13px] leading-relaxed text-muted-foreground" title={run.summary}>{run.summary}</p>}
 
       {run.status !== "terminal" && <button className="mt-auto flex items-center justify-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-[13px] text-rose-700 hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300" onClick={onCancel}><Ban size={14} /> Cancel run</button>}
+      {callsOpen && <CallsDrawer runId={run.id} onClose={() => setCallsOpen(false)} />}
     </aside>
   );
 }

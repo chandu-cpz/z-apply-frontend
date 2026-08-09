@@ -9,9 +9,12 @@ interface Props {
   pendingRequests?: HumanRequest[];
   busy?: boolean;
   onSendContext(content: string): void;
+  onStop?(): void;
 }
 
-export function AgentConversation({ run, events, pendingRequests, busy = false, onSendContext }: Props) {
+export function AgentConversation({ run, events, pendingRequests, busy = false, onSendContext, onStop }: Props) {
+  const streaming = run.status === "running" || run.status === "starting";
+  const status = streaming && run.current_model ? `Streaming · ${run.current_model.split("/").pop()}` : streaming ? "Streaming" : undefined;
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="min-h-0 flex-1">
@@ -22,9 +25,11 @@ export function AgentConversation({ run, events, pendingRequests, busy = false, 
       </div>
       <Composer
         disabled={run.status === "terminal" || busy}
-        streaming={false}
+        streaming={streaming}
+        status={status}
         placeholder={run.status === "terminal" ? "This run has ended" : "Steer the agent, correct a fact, or add context…"}
         onSend={onSendContext}
+        onStop={onStop}
       />
     </section>
   );

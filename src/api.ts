@@ -3,6 +3,7 @@ import type { ActivityEvent } from "./types";
 import {
   activityEventSchema,
   artifactSchema,
+  callLedgerSchema,
   contextMessageSchema,
   diagnosticsSchema,
   documentSchema,
@@ -42,6 +43,7 @@ export const api = {
     return all;
   },
   human: (id: string) => request(`/api/v1/runs/${id}/human-requests`, z.array(humanRequestSchema)),
+  calls: (id: string) => request(`/api/v1/runs/${id}/calls`, callLedgerSchema),
   artifacts: (id: string) => request(`/api/v1/runs/${id}/artifacts`, z.array(artifactSchema)),
   liveView: () => request("/api/v1/browser/live-view", liveViewSchema),
   diagnostics: () => request("/api/v1/diagnostics", diagnosticsSchema),

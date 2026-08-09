@@ -54,8 +54,11 @@ export function MessageList({ runId, events, run }: { runId: string; events: Act
   const liveAgents = useMemo<LiveAgent[]>(() => mergeLive(live, boundaries), [live, boundaries]);
   const rows = useMemo<ChatRow[]>(() => {
     const flat: ChatRow[] = [];
-    for (const agent of liveAgents) flat.push({ kind: "assistant-live", agent });
+    // Completed timeline first (chronological), then the in-flight live
+    // assistants appended at the bottom — the natural reading order for a
+    // chat thread (Claude/ChatGPT append streaming content at the end).
     flattenTimeline(buildTimeline(events), flat);
+    for (const agent of liveAgents) flat.push({ kind: "assistant-live", agent });
     return groupRows(flat);
   }, [liveAgents, events]);
 

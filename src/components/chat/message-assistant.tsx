@@ -1,8 +1,9 @@
 import { memo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { ChevronRight, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { fmtTime, humanAgent } from "@/lib/format";
+import { fmtDur, fmtNum, fmtTime, humanAgent, humanModel } from "@/lib/format";
 import type { LiveAgent } from "@/lib/live";
 import type { TurnItem } from "@/lib/timeline/types";
 
@@ -21,9 +22,43 @@ export function AgentAvatar({ streaming = false }: { streaming?: boolean }) {
   );
 }
 
-function ThinkingStrip({ reasoning, streaming = false }: { reasoning: string; streaming?: boolean }) {
+function LiveChips({ agent }: { agent: LiveAgent }) {
+  const metrics = agent.metrics;
+  if (!metrics) return null;
+  const chips: Array<{ label: string; title?: string }> = [];
+  if (metrics.model) chips.push({ label: humanModel(metrics.model), title: metrics.model });
+  if (metrics.provider) chips.push({ label: metrics.provider });
+  if (metrics.ttftMs > 0) chips.push({ label: `TTFT ${fmtDur(metrics.ttftMs)}` });
+  if (metrics.tokPerSecond > 0) chips.push({ label: `${metrics.tokPerSecond.toFixed(0)} tok/s` });
+  if (metrics.outputTokens > 0) chips.push({ label: `~${fmtNum(metrics.outputTokens)} tok` });
+  if (chips.length === 0) return null;
+  return (
+    <span className="flex flex-wrap items-center gap-1.5">
+      {chips.map((chip) => (
+        <span
+          key={chip.label}
+          title={chip.title}
+          className="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 font-mono text-[11px] tabular-nums text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400"
+        >
+          {chip.label}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function ThinkingStrip({
+  reasoning,
+  streaming = false,
+  durationMs,
+}: {
+  reasoning: string;
+  streaming?: boolean;
+  durationMs?: number;
+}) {
   const [open, setOpen] = useState(true);
   if (!reasoning && !streaming) return null;
+  const caption = streaming ? "Thinking…" : durationMs && durationMs > 0 ? `Thought · ${fmtDur(durationMs)}` : "Thought";
   return (
     <div className="mb-3 overflow-hidden rounded-xl border border-violet-200/70 bg-violet-50/50 dark:border-violet-900/40 dark:bg-violet-950/15">
       <button
@@ -37,33 +72,52 @@ function ThinkingStrip({ reasoning, streaming = false }: { reasoning: string; st
         ) : (
           <ChevronRight size={13} className={cn("shrink-0 text-violet-400 transition-transform", open && "rotate-90")} />
         )}
-        <span className="text-xs font-medium text-violet-600 dark:text-violet-300">{streaming ? "Thinking…" : "Thought"}</span>
+        <span className="text-xs font-medium text-violet-600 dark:text-violet-300">{caption}</span>
         {!streaming && reasoning && (
           <span className="ml-auto hidden truncate text-xs text-violet-400/80 sm:inline dark:text-violet-300/60">{reasoning.slice(0, 72)}</span>
         )}
       </button>
-      {open && (
-        <pre className="max-h-72 overflow-auto border-t border-violet-200/60 px-3 py-2.5 font-mono text-[13px] leading-relaxed whitespace-pre-wrap text-zinc-600 dark:border-violet-900/40 dark:text-zinc-300">
-          {reasoning}
-          {streaming && <span className="animate-pulse text-violet-500">▍</span>}
-        </pre>
-      )}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="thinking-body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="overflow-hidden"
+          >
+            <pre className="max-h-72 overflow-auto border-t border-violet-200/60 px-3 py-2.5 font-mono text-[13px] leading-relaxed whitespace-pre-wrap text-zinc-600 dark:border-violet-900/40 dark:text-zinc-300">
+              {reasoning}
+              {streaming && <span className="animate-pulse text-violet-500">▍</span>}
+            </pre>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
+const markdownClass = [
+  "text-[15px] leading-relaxed text-zinc-800 dark:text-zinc-200",
+  "[&_p]:my-2.5 [&_li]:my-1",
+  "[&_h1]:mt-5 [&_h1]:mb-2 [&_h1]:text-xl [&_h1]:font-semibold",
+  "[&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold",
+  "[&_h3]:mt-4 [&_h3]:mb-1.5 [&_h3]:text-base [&_h3]:font-semibold",
+  "[&_a]:text-violet-600 [&_a]:underline dark:[&_a]:text-violet-300",
+  "[&_pre]:my-2.5 [&_pre]:overflow-auto [&_pre]:rounded-xl [&_pre]:bg-zinc-950 [&_pre]:p-3.5 [&_pre]:font-mono [&_pre]:text-[13px] [&_pre]:leading-relaxed [&_pre]:text-zinc-100",
+  "[&_code]:rounded [&_code]:bg-zinc-100 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[13px] [&_code]:text-zinc-800 dark:[&_code]:bg-zinc-800 dark:[&_code]:text-zinc-100",
+].join(" ");
+
 function AssistantText({ text, streaming }: { text: string; streaming: boolean }) {
-  if (streaming) {
-    return (
-      <p className="text-pretty whitespace-pre-wrap text-[15px] leading-relaxed">
-        {text}
-        <span className="animate-z-blink ml-0.5 inline-block h-[1.05em] w-[3px] translate-y-[2px] rounded-[1px] bg-zinc-600 dark:bg-zinc-300" aria-hidden />
-      </p>
-    );
-  }
   return (
-    <div className="text-[15px] leading-relaxed text-zinc-800 [&_p]:my-2.5 [&_li]:my-1 [&_h1]:mt-5 [&_h1]:mb-2 [&_h1]:text-xl [&_h1]:font-semibold [&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:mb-1.5 [&_h3]:text-base [&_h3]:font-semibold [&_a]:text-violet-600 [&_a]:underline dark:text-zinc-200 dark:[&_a]:text-violet-300 [&_pre]:my-2.5 [&_pre]:overflow-auto [&_pre]:rounded-xl [&_pre]:bg-zinc-950 [&_pre]:p-3.5 [&_pre]:font-mono [&_pre]:text-[13px] [&_pre]:leading-relaxed [&_pre]:text-zinc-100 [&_code]:rounded [&_code]:bg-zinc-100 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[13px] [&_code]:text-zinc-800 dark:[&_pre]:bg-zinc-950 dark:[&_code]:bg-zinc-800 dark:[&_code]:text-zinc-100">
-      <ReactMarkdown>{text}</ReactMarkdown>
+    <div className="text-pretty">
+      <div className={markdownClass}>
+        <ReactMarkdown>{text}</ReactMarkdown>
+      </div>
+      {streaming && (
+        <span className="ml-0.5 inline-block h-[1.05em] w-[3px] translate-y-[2px] animate-z-blink rounded-[1px] bg-zinc-600 dark:bg-zinc-300" aria-hidden />
+      )}
     </div>
   );
 }
@@ -80,19 +134,15 @@ export function TurnMessage({ item }: { item: TurnItem }) {
           <span className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{humanAgent(item.agent)}</span>
           {item.model && (
             <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-              {item.model}
+              {humanModel(item.model)}
             </span>
           )}
           <time className="ml-auto shrink-0 text-xs tabular-nums text-zinc-400 dark:text-zinc-500" title={`event #${item.seq}`}>
             {fmtTime(item.occurredAt)}
           </time>
         </div>
-        {hasReasoning && <ThinkingStrip reasoning={item.reasoning} />}
-        {hasProse && (
-          <div className="rounded-xl border border-zinc-200/70 bg-white/70 px-3.5 py-2.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
-            <AssistantText text={item.text} streaming={false} />
-          </div>
-        )}
+        {hasReasoning && <ThinkingStrip reasoning={item.reasoning} durationMs={item.usage.durationMs} />}
+        {hasProse && <AssistantText text={item.text} streaming={false} />}
         {item.toolCalls.length > 0 && (
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
             {item.toolCalls.map((tool, index) => (
@@ -125,6 +175,7 @@ export const LiveAssistant = memo(function LiveAssistant({ agent }: { agent: Liv
               streaming
             </span>
           )}
+          <LiveChips agent={agent} />
           <time className="ml-auto shrink-0 text-xs tabular-nums text-zinc-400 dark:text-zinc-500" title={`event #${agent.firstSeq}`}>
             {fmtTime(agent.occurredAt)}
           </time>
@@ -159,7 +210,7 @@ export const LiveAssistant = memo(function LiveAssistant({ agent }: { agent: Liv
             </div>
           </>
         )}
-        <ThinkingStrip reasoning={agent.reasoning} streaming={streaming} />
+        <ThinkingStrip reasoning={agent.reasoning} streaming={streaming} durationMs={agent.metrics?.durationMs} />
         {tools.length > 0 && (
           <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
             {tools.map((tool) => (
