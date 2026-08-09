@@ -1,7 +1,21 @@
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, ExternalLink } from "lucide-react";
 import { cn } from "../lib/utils";
 import type { Run } from "../types";
 import { PageShell } from "../components/page-shell";
+
+function openJobUrl(run: Run): void {
+  window.open(run.job_url, "_blank", "noopener,noreferrer");
+}
+
+/** Plain click opens the run; Ctrl/Cmd+click opens the job URL directly. */
+function handleRowClick(run: Run, event: React.MouseEvent, onOpen: (run: Run) => void): void {
+  if (event.button === 2) return;
+  if (event.ctrlKey || event.metaKey) {
+    openJobUrl(run);
+    return;
+  }
+  onOpen(run);
+}
 
 function statusChip(run: Run): { label: string; cls: string; dot: string } {
   const submitted = run.outcome === "submitted_verified";
@@ -39,7 +53,8 @@ function RunRowCard({ run, onOpen }: { run: Run; onOpen(run: Run): void }) {
   return (
     <button
       className="w-full rounded-xl border border-zinc-200 bg-white p-4 text-left transition hover:border-violet-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-violet-800"
-      onClick={() => onOpen(run)}
+      onClick={(event) => handleRowClick(run, event, onOpen)}
+      title={run.job_url}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -63,7 +78,7 @@ function RunRowCard({ run, onOpen }: { run: Run; onOpen(run: Run): void }) {
 
 export function HistoryScreen({ runs, onOpen }: { runs: Run[]; onOpen(run: Run): void }) {
   return (
-    <PageShell title="Runs" description="Every application this cockpit has run. Open one to see the full conversation, browser state, and artifacts.">
+    <PageShell title="Runs" description="Every application this cockpit has run. Open one to see the full conversation, browser state, and artifacts. Ctrl/Cmd+click a row to open the job posting.">
       <div className="grid gap-3 md:hidden">
         {runs.map((run) => (
           <RunRowCard key={run.id} run={run} onOpen={onOpen} />
@@ -87,9 +102,10 @@ export function HistoryScreen({ runs, onOpen }: { runs: Run[]; onOpen(run: Run):
               const chip = statusChip(run);
               return (
                 <tr
-                  className="cursor-pointer border-t border-zinc-100 transition-colors hover:bg-violet-50/40 dark:border-zinc-800 dark:hover:bg-violet-950/20"
+                  className="group cursor-pointer border-t border-zinc-100 transition-colors hover:bg-violet-50/40 dark:border-zinc-800 dark:hover:bg-violet-950/20"
                   key={run.id}
-                  onClick={() => onOpen(run)}
+                  onClick={(event) => handleRowClick(run, event, onOpen)}
+                  title={run.job_url}
                 >
                   <td className="px-4 py-3">
                     <AppIdentity run={run} />
@@ -104,9 +120,17 @@ export function HistoryScreen({ runs, onOpen }: { runs: Run[]; onOpen(run: Run):
                   <td className="px-4 py-3 capitalize text-zinc-600 dark:text-zinc-300">{run.outcome?.replaceAll("_", " ") || "—"}</td>
                   <td className="px-4 py-3 text-zinc-500 dark:text-zinc-400">{formatDate(run.started_at || run.created_at)}</td>
                   <td>
-                    <span className="grid size-8 place-items-center rounded-lg text-zinc-400 dark:text-zinc-500">
-                      <ArrowUpRight size={15} />
-                    </span>
+                    <button
+                      type="button"
+                      className="grid size-8 place-items-center rounded-lg text-zinc-400 opacity-0 transition group-hover:opacity-100 hover:bg-zinc-100 hover:text-zinc-600 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                      title={`Open job posting (${hostname(run.job_url)})`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openJobUrl(run);
+                      }}
+                    >
+                      <ExternalLink size={15} />
+                    </button>
                   </td>
                 </tr>
               );
