@@ -10,8 +10,8 @@ timelines.
 Start the backend first, then:
 
 ```bash
-pnpm install --store-dir=/tmp/pnpm-store
-pnpm dev
+npm install
+npm run dev
 ```
 
 Open `http://127.0.0.1:5173`. Vite forwards `/api` to the local FastAPI server.
