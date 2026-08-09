@@ -92,6 +92,9 @@ function rowSeq(row: ChatRow): number {
   }
 }
 
+export { rowSeq };
+
+
 export function flattenTimeline(items: TimelineItem[], rows: ChatRow[]): void {
   for (const item of items) {
     if (item.kind === "agent-segment") {

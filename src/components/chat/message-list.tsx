@@ -8,7 +8,7 @@ import type { ActivityEvent, Run } from "@/types";
 import { useLiveStore } from "@/live-store";
 import { LiveAssistant, TurnMessage } from "./message-assistant";
 import { ToolMessage } from "./message-tool";
-import { ActivityGroup, HumanHandoffCard, ModelClusterRowCard, RecoveryRow, RunLabel, SectionDivider, StallRow, SubmissionApprovalCard, SystemRow } from "./message-row";import { flattenTimeline, groupRows, isQuiet, rowKey, type ChatRow } from "./rows";
+import { ActivityGroup, HumanHandoffCard, ModelClusterRowCard, RecoveryRow, RunLabel, SectionDivider, StallRow, SubmissionApprovalCard, SystemRow } from "./message-row";import { flattenTimeline, groupRows, isQuiet, rowKey, rowSeq, type ChatRow } from "./rows";
 
 const FOLLOW_THRESHOLD_PX = 80;
 
@@ -159,6 +159,13 @@ export function MessageList({ runId, events, run, onAnswer, onDecide }: { runId:
     const flat: ChatRow[] = [];
     flattenTimeline(buildTimeline(events), flat);
     for (const agent of liveAgents) flat.push({ kind: "assistant-live", agent });
+    // Strict chronological order at the row level. Segment merging and
+    // subagent nesting can pull turn content across the position of a
+    // top-level checkpoint/approval card (e.g. a rejected submission card
+    // rendered after the agent's later fill work); sorting by run sequence
+    // guarantees every row — including handoffs and approvals — renders
+    // exactly where it happened.
+    flat.sort((left, right) => rowSeq(left) - rowSeq(right));
     const conversation: ChatRow[] = [];
     const system: ChatRow[] = [];
     for (const row of flat) {
