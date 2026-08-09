@@ -83,7 +83,7 @@ describe("buildTimeline segmentation", () => {
     expect(orchSeg.items.map((inner) => inner.kind)).toEqual(["model", "turn", "tool", "agent-segment", "turn", "tool"]);
   });
 
-  it("coalesces same-agent segments interrupted by another agent into one card with per-run sections", () => {
+  it("coalesces same-agent segments interrupted by another agent into a single run", () => {
     const events = [
       start(5, "orchestrator", "/orchestrator"),
       turn(7, "orchestrator"),
@@ -97,13 +97,14 @@ describe("buildTimeline segmentation", () => {
     ];
     const items = buildTimeline(events);
     const orchSeg = segmentOf(items, "orchestrator")!;
-    expect(orchSeg.runs).toHaveLength(2);
+    // Subagent interruptions must not fragment the coordinator into many
+    // runs: the orchestrator shows once in the agents drawer.
+    expect(orchSeg.runs).toHaveLength(1);
     expect(orchSeg.spawned).toBe(1);
     expect(orchSeg.status).toBe("running");
-    expect(orchSeg.runs[0].items.map((inner) => inner.kind)).toEqual(["turn", "tool"]);
-    // AnswerWriter nests inside the orchestrator's active (last) run, sorted by seq.
-    expect(orchSeg.runs[1].items.map((inner) => inner.kind)).toEqual(["agent-segment", "turn", "tool"]);
-    expect(orchSeg.runs[1].items[0]).toMatchObject({ agent: "AnswerWriter" });
+    expect(orchSeg.runs[0].items.map((inner) => inner.kind)).toEqual(["turn", "tool", "agent-segment", "turn", "tool"]);
+    // AnswerWriter still nests inside the orchestrator's merged run, sorted by seq.
+    expect(orchSeg.runs[0].items[2]).toMatchObject({ agent: "AnswerWriter" });
   });
 
   it("flags parallel double-start and counts spawned runs", () => {

@@ -467,25 +467,43 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
     if (emitted.has(item.agent)) continue;
     emitted.add(item.agent);
     const runs = runsList.get(item.agent)!;
-    if (runs.length <= 1) {
-      finalItems.push(item);
+    // Merge consecutive non-parallel runs of the same agent into a single run
+    // so the coordinator spine (orchestrator) stays one row even when subagent
+    // delegations interrupt its turn stream between LLM calls.
+    const mergedRuns: AgentRun[] = [];
+    for (const run of runs) {
+      const prev = mergedRuns[mergedRuns.length - 1];
+      if (prev && !prev.parallel && !run.parallel) {
+        prev.items = [...prev.items, ...run.items];
+        prev.endedAt = run.endedAt;
+        prev.spawned = Math.max(prev.spawned, run.spawned);
+      } else {
+        mergedRuns.push({ ...run, items: [...run.items] });
+      }
+    }
+    if (mergedRuns.length <= 1) {
+      if (mergedRuns.length === 1) {
+        finalItems.push({ ...item, runs: mergedRuns, items: mergedRuns[0].items });
+      } else {
+        finalItems.push(item);
+      }
       continue;
     }
     const first = runsByAgent.get(item.agent)!;
-    const last = runs[runs.length - 1];
-    const status: "running" | "completed" | "failed" = runs.some((run) => run.status === "running")
+    const last = mergedRuns[mergedRuns.length - 1];
+    const status: "running" | "completed" | "failed" = mergedRuns.some((run) => run.status === "running")
       ? "running"
-      : runs.some((run) => run.status === "failed")
+      : mergedRuns.some((run) => run.status === "failed")
         ? "failed"
         : "completed";
     finalItems.push({
       ...first,
       status,
-      parallel: runs.some((run) => run.parallel),
-      spawned: runs.reduce((sum, run) => sum + run.spawned, 0),
+      parallel: mergedRuns.some((run) => run.parallel),
+      spawned: mergedRuns.reduce((sum, run) => sum + run.spawned, 0),
       endedAt: last.endedAt,
-      items: runs.flatMap((run) => run.items),
-      runs,
+      items: mergedRuns.flatMap((run) => run.items),
+      runs: mergedRuns,
     });
   }
 
