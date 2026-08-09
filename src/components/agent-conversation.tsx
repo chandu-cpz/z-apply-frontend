@@ -58,9 +58,7 @@ function HumanNeeded({ requests }: { requests: HumanRequest[] }) {
 
 function ListeningState({ run, streaming }: { run: Run; streaming: boolean }) {
   if (run.status === "terminal") {
-    return (
-      <p className="mx-auto w-full max-w-[760px] px-1 text-sm text-zinc-400 dark:text-zinc-500">This run has finished. Its live transcript is above.</p>
-    );
+    return null;
   }
   return (
     <p className="mx-auto flex w-full max-w-[760px] items-center gap-2 px-1 text-sm text-zinc-400 dark:text-zinc-500">
