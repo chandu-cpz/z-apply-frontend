@@ -1,20 +1,14 @@
 import { Ban, BriefcaseBusiness, CheckCircle2, ExternalLink, PanelRight, Sparkles, XCircle } from "lucide-react";
-import type { Run } from "../types";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../api";
+import type { Artifact, Run } from "../types";
 
 export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCancel(): void; onOpenSubagents(): void }) {
   const submitted = run.outcome === "submitted_verified";
   const failed = run.status === "terminal" && !submitted && run.outcome !== "cancelled";
   return (
     <aside className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto border-r border-border bg-muted/40 p-3 dark:bg-zinc-950">
-      {submitted && (
-        <div className="rounded-xl border border-emerald-300/60 bg-emerald-50 p-3.5 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/40">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="text-emerald-600 dark:text-emerald-300" size={18} />
-            <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Application submitted</span>
-          </div>
-          {run.summary && <p className="mt-2 text-[13px] leading-relaxed text-emerald-900/80 dark:text-emerald-100/80">{run.summary}</p>}
-        </div>
-      )}
+      {submitted && <SubmissionSuccess run={run} />}
       {failed && (
         <div className="rounded-xl border border-rose-300/60 bg-rose-50 p-3.5 shadow-sm dark:border-rose-900/60 dark:bg-rose-950/40">
           <div className="flex items-center gap-2">
@@ -64,3 +58,56 @@ export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCan
 }
 
 function hostname(url: string): string { try { return new URL(url).hostname.replace("www.", ""); } catch { return "Application"; } }
+
+function SubmissionSuccess({ run }: { run: Run }) {
+  const { data: artifacts } = useQuery({
+    queryKey: ["run-artifacts", run.id],
+    queryFn: () => api.artifacts(run.id),
+    enabled: run.outcome === "submitted_verified",
+    refetchInterval: 8_000,
+  });
+  const confirmation = byKind(artifacts, "submission_confirmation");
+  const review = byKind(artifacts, "review_screenshot");
+  return (
+    <div className="overflow-hidden rounded-xl border border-emerald-300/60 bg-emerald-50 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/40">
+      <div className="flex items-center gap-2 px-3.5 pt-3 pb-2">
+        <CheckCircle2 className="text-emerald-600 dark:text-emerald-300" size={18} />
+        <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Application submitted</span>
+        <span className="ml-auto rounded-full bg-emerald-200/70 px-2 py-0.5 font-mono text-[10px] text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200">✓ verified</span>
+      </div>
+      {confirmation && (
+        <a
+          href={`/api/v1/artifacts/${confirmation.artifact_id}`}
+          target="_blank"
+          rel="noreferrer"
+          className="block border-y border-emerald-200/70 bg-white p-2 dark:border-emerald-900/60 dark:bg-zinc-950"
+        >
+          <img
+            src={`/api/v1/artifacts/${confirmation.artifact_id}`}
+            alt="Submission confirmation screenshot"
+            className="mx-auto max-h-72 w-auto rounded-lg object-contain"
+          />
+        </a>
+      )}
+      {run.summary && (
+        <p className="px-3.5 pt-2 pb-3 text-[13px] leading-relaxed text-emerald-900/80 dark:text-emerald-100/80">{run.summary}</p>
+      )}
+      {review && (
+        <details className="border-t border-emerald-200/70 px-3.5 py-2 dark:border-emerald-900/60">
+          <summary className="cursor-pointer text-[11px] font-medium text-emerald-700 dark:text-emerald-300">Pre-submit review screenshot</summary>
+          <a href={`/api/v1/artifacts/${review.artifact_id}`} target="_blank" rel="noreferrer" className="mt-2 block">
+            <img
+              src={`/api/v1/artifacts/${review.artifact_id}`}
+              alt="Application review screenshot"
+              className="mx-auto max-h-56 w-auto rounded-lg object-contain"
+            />
+          </a>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function byKind(artifacts: Artifact[] | undefined, kind: string): Artifact | undefined {
+  return artifacts?.find((artifact) => artifact.kind === kind);
+}
