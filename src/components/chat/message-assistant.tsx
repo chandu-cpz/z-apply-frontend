@@ -100,10 +100,11 @@ export function TurnMessage({ item }: { item: TurnItem }) {
 }
 
 export const LiveAssistant = memo(function LiveAssistant({ agent }: { agent: LiveAgent }) {
-  const active = Boolean(agent.text || agent.reasoning || agent.toolCalls.size > 0);
+  const active = Boolean(agent.text || agent.reasoning || agent.toolCalls.size > 0 || agent.streaming);
   if (!active) return null;
   const streaming = agent.streaming;
   const tools = [...agent.toolCalls.entries()].map(([index, call]) => ({ index, id: call.id, name: call.name }));
+  const waiting = streaming && !agent.text && !agent.reasoning && tools.length === 0;
   return (
     <div className="mb-7 flex items-start gap-3.5">
       <AgentAvatar streaming={streaming} />
@@ -120,6 +121,13 @@ export const LiveAssistant = memo(function LiveAssistant({ agent }: { agent: Liv
             {fmtTime(agent.occurredAt)}
           </time>
         </div>
+        {waiting && (
+          <div className="flex flex-col gap-2 py-1" aria-label="thinking">
+            <div className="h-3 w-11/12 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" />
+            <div className="h-3 w-8/12 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" />
+            <div className="h-3 w-10/12 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" />
+          </div>
+        )}
         <ThinkingStrip reasoning={agent.reasoning} streaming={streaming} />
         {tools.length > 0 && (
           <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
