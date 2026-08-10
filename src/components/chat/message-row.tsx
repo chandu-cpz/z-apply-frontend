@@ -51,26 +51,33 @@ export function RecoveryRow({ attempt, errorType, detail, stage }: { attempt: nu
   const title = RECOVERY_TITLES[stage] ?? stage.replaceAll("_", " ");
   const reason = detail || (errorType ? errorType.replaceAll("_", " ") : "");
   const attemptLabel = attempt > 0 ? `attempt ${attempt}` : "";
+  const working = stage === "started" || stage === "progress_reset";
   return (
     <div className="mb-1.5">
-      <button
-        type="button"
-        onClick={() => collapsible && setOpen((value) => !value)}
-        disabled={!collapsible}
-        className={cn(
-          "flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left transition-colors",
-          collapsible ? "hover:bg-amber-50 dark:hover:bg-amber-950/20" : "cursor-default",
-        )}
-        aria-expanded={open}
-      >
-        <RotateCcw size={12} className="shrink-0 text-amber-400" />
+      <div className="flex w-full items-center gap-2 rounded-lg px-2 py-1">
+        <RotateCcw size={12} className={cn("shrink-0 text-amber-400", working && "animate-spin")} />
         <span className="min-w-0 flex-1 truncate text-[12.5px] text-amber-700 dark:text-amber-300">
           {title}
           {reason && <span className="ml-1.5 text-amber-500/80 dark:text-amber-200/60">· {reason}</span>}
           {attemptLabel && <span className="ml-1 text-[11px] text-amber-400/80 dark:text-amber-300/50">({attemptLabel})</span>}
         </span>
-        {collapsible && <ChevronRight size={11} className={cn("shrink-0 text-amber-300 transition-transform", open && "rotate-90")} />}
-      </button>
+        {working && (
+          <span className="flex shrink-0 items-center gap-1 text-[11px] text-amber-500 dark:text-amber-300">
+            <span className="size-1 animate-pulse rounded-full bg-amber-400" />
+            working…
+          </span>
+        )}
+        {collapsible && (
+          <button
+            type="button"
+            onClick={() => setOpen((value) => !value)}
+            className="shrink-0 rounded p-0.5 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+            aria-expanded={open}
+          >
+            <ChevronRight size={11} className={cn("text-amber-300 transition-transform", open && "rotate-90")} />
+          </button>
+        )}
+      </div>
       {open && (
         <pre className="mt-1 ml-6 max-h-64 overflow-auto rounded-lg bg-amber-50/70 px-3 py-2 font-mono text-[12px] leading-relaxed whitespace-pre-wrap text-amber-800 dark:bg-amber-950/20 dark:text-amber-200">
           {detail}
