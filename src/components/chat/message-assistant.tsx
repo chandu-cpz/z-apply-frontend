@@ -153,15 +153,6 @@ export function TurnMessage({ item }: { item: TurnItem }) {
         <MessageHeader agent={item.agent} model={item.model} occurredAt={item.occurredAt} seq={item.seq} />
         {hasReasoning && <ThinkingStrip reasoning={item.reasoning} durationMs={item.usage.durationMs} />}
         {hasProse && <AssistantText text={item.text} streaming={false} />}
-        {item.toolCalls.length > 0 && (
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            {item.toolCalls.filter((tool) => tool.name).map((tool, index) => (
-              <span key={`${tool.id || tool.name || index}`} className="rounded-full bg-zinc-100 px-2 py-0.5 font-mono text-[11px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                {tool.name}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
@@ -218,15 +209,6 @@ export const LiveAssistant = memo(function LiveAssistant({ agent }: { agent: Liv
           </>
         )}
         <ThinkingStrip reasoning={agent.reasoning} streaming={streaming} durationMs={agent.metrics?.durationMs} />
-        {tools.length > 0 && (
-          <div className="mb-2 flex flex-wrap items-center gap-1.5">
-            {tools.filter((tool) => tool.name).map((tool) => (
-              <span key={`${tool.index}-${tool.id}`} className="rounded-full bg-zinc-100 px-2 py-0.5 font-mono text-[11px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                {tool.name}
-              </span>
-            ))}
-          </div>
-        )}
         {agent.text && <AssistantText text={agent.text} streaming={streaming} />}
         {!agent.text && !agent.reasoning && tools.length === 0 && (
           <p className="flex items-center gap-1.5 text-[13px] text-zinc-400 dark:text-zinc-500">
