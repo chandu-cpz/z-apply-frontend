@@ -177,13 +177,14 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
   const refresh = () => { void query.invalidateQueries({ queryKey: ["runs"] }); void query.invalidateQueries({ queryKey: ["run", run.id] }); void query.invalidateQueries({ queryKey: ["live"] }); };
 
   // Opening a run page (URL, history, or rail) focuses its live browser so
-  // the panel always shows the run being viewed.
+  // the panel always shows the run being viewed. Any run with an open browser
+  // (running OR terminal-retained) can be focused.
   useEffect(() => {
-    if (run.status !== "terminal") {
+    if (run.browser_tab_state === "open") {
       void api.focus(run.id).catch(() => undefined);
       void query.invalidateQueries({ queryKey: ["live"] });
     }
-  }, [run.id, run.status]);
+  }, [run.id, run.browser_tab_state]);
 
   const action = useMutation({ mutationFn: async (operation: () => Promise<unknown>) => operation(), onSuccess: refresh, onError: (error) => toast.error("Action could not be completed", { description: error.message }) });
   const humanControl = live.data?.control_mode === "human_control" && live.data.focused_run_id === run.id;
