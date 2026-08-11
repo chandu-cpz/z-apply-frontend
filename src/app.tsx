@@ -176,6 +176,15 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
   const live = useQuery({ queryKey: ["live"], queryFn: api.liveView, refetchInterval: 2_000 });
   const refresh = () => { void query.invalidateQueries({ queryKey: ["runs"] }); void query.invalidateQueries({ queryKey: ["run", run.id] }); void query.invalidateQueries({ queryKey: ["live"] }); };
 
+  // Opening a run page (URL, history, or rail) focuses its live browser so
+  // the panel always shows the run being viewed.
+  useEffect(() => {
+    if (run.status !== "terminal") {
+      void api.focus(run.id).catch(() => undefined);
+      void query.invalidateQueries({ queryKey: ["live"] });
+    }
+  }, [run.id, run.status]);
+
   const action = useMutation({ mutationFn: async (operation: () => Promise<unknown>) => operation(), onSuccess: refresh, onError: (error) => toast.error("Action could not be completed", { description: error.message }) });
   const humanControl = live.data?.control_mode === "human_control" && live.data.focused_run_id === run.id;
   const openRun = (nextRun: Run) => { onSelect(nextRun); if (nextRun.status !== "terminal") action.mutate(() => api.focus(nextRun.id)); };
