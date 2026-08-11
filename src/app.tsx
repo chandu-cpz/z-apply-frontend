@@ -173,18 +173,29 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
   const desktop = useDesktopWorkspace();
   const layout = useDefaultLayout({ id: "z-apply-workspace-v4", storage: localStorage });
   const events = useQuery({ queryKey: ["events", run.id], queryFn: () => api.events(run.id), refetchInterval: 5_000 });
-  const live = useQuery({ queryKey: ["live"], queryFn: api.liveView, refetchInterval: 2_000 });
   const refresh = () => { void query.invalidateQueries({ queryKey: ["runs"] }); void query.invalidateQueries({ queryKey: ["run", run.id] }); void query.invalidateQueries({ queryKey: ["live"] }); };
+
+  // The live view (VNC) is only needed while the browser panel is actually
+  // on screen: pause polling when the tab is hidden or the browser tab is not
+  // selected on mobile — no point streaming a screen nobody is looking at.
+  const pageVisible = usePageVisible();
+  const browserShown = pageVisible && (desktop || mobilePanel === "browser");
+  const live = useQuery({
+    queryKey: ["live"],
+    queryFn: api.liveView,
+    enabled: browserShown,
+    refetchInterval: browserShown ? 2_000 : false,
+  });
 
   // Opening a run page (URL, history, or rail) focuses its live browser so
   // the panel always shows the run being viewed. Any run with an open browser
   // (running OR terminal-retained) can be focused.
   useEffect(() => {
-    if (run.browser_tab_state === "open") {
+    if (run.browser_tab_state === "open" && pageVisible) {
       void api.focus(run.id).catch(() => undefined);
       void query.invalidateQueries({ queryKey: ["live"] });
     }
-  }, [run.id, run.browser_tab_state]);
+  }, [run.id, run.browser_tab_state, pageVisible]);
 
   const action = useMutation({ mutationFn: async (operation: () => Promise<unknown>) => operation(), onSuccess: refresh, onError: (error) => toast.error("Action could not be completed", { description: error.message }) });
   const humanControl = live.data?.control_mode === "human_control" && live.data.focused_run_id === run.id;
@@ -210,6 +221,16 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
 
 const desktopMedia = window.matchMedia("(min-width: 768px)");
 function useDesktopWorkspace(): boolean { return useSyncExternalStore((notify) => { desktopMedia.addEventListener("change", notify); return () => desktopMedia.removeEventListener("change", notify); }, () => desktopMedia.matches); }
+
+function usePageVisible(): boolean {
+  const [visible, setVisible] = useState(() => !document.hidden);
+  useEffect(() => {
+    const onChange = () => setVisible(!document.hidden);
+    document.addEventListener("visibilitychange", onChange);
+    return () => document.removeEventListener("visibilitychange", onChange);
+  }, []);
+  return visible;
+}
 function MobileTab({ active, attention = false, label, icon, onClick }: { active: boolean; attention?: boolean; label: string; icon: React.ReactNode; onClick(): void }) { return <button className={`relative flex items-center justify-center gap-2 rounded-lg text-[11px] ${active ? "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200" : "text-stone-500 dark:text-zinc-500"}`} onClick={onClick}>{icon}{label}{attention && <span className="absolute top-1.5 right-[22%] size-2 rounded-full bg-amber-400"/>}</button>; }
 
 function ResizeHandle() { return <Separator className="group relative w-2 cursor-col-resize bg-stone-200 after:absolute after:inset-x-[3px] after:top-[40%] after:bottom-[40%] after:rounded after:bg-stone-400 hover:after:bg-violet-500 dark:bg-zinc-900"/>; }
