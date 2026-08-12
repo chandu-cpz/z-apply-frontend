@@ -32,7 +32,7 @@ export function App() {
   const detail = useQuery({ queryKey: ["run", routeRunId], queryFn: () => api.run(routeRunId), enabled: Boolean(routeRunId) });
   const selected = detail.data ?? runs.data?.find((run) => run.id === routeRunId);
   const create = useMutation({
-    mutationFn: ({ url, task }: { url: string; task: string }) => api.createRun(url, task),
+    mutationFn: ({ url, task, promptVariant }: { url: string; task: string; promptVariant: string }) => api.createRun(url, task, promptVariant),
     onSuccess: (run) => {
       query.setQueryData<Run[]>(["runs"], (old = []) => [run, ...old.filter((item) => item.id !== run.id)]);
       navigate({ name: "run", runId: run.id });
@@ -75,7 +75,7 @@ export function App() {
 
   return <div className={`${theme === "dark" ? "dark" : ""} min-h-screen bg-stone-100 font-sans text-stone-950 antialiased dark:bg-zinc-950 dark:text-zinc-100`}>
     <Header active={selected} route={route} streamStatus={streamStatus} navigate={navigate}/>
-    {route.name === "new" && <StartRun onSubmit={(url, task) => create.mutate({ url, task })}/>}
+    {route.name === "new" && <StartRun onSubmit={(url, task, promptVariant) => create.mutate({ url, task, promptVariant })}/>}
     {route.name === "history" && <HistoryScreen runs={runs.data ?? []} onOpen={(run) => navigate({ name: "run", runId: run.id })}/>}
     {route.name === "artifacts" && <ArtifactsScreen runs={runs.data ?? []}/>}
     {route.name === "settings" && <SettingsScreen/>}

@@ -10,6 +10,7 @@ import {
   humanRequestSchema,
   liveViewSchema,
   profileSchema,
+  promptVariantSchema,
   runSchema,
   settingsSchema,
 } from "./schemas";
@@ -50,7 +51,9 @@ export const api = {
   settings: () => request("/api/v1/settings", settingsSchema),
   profile: () => request("/api/v1/profile", profileSchema),
   documents: () => request("/api/v1/documents", z.array(documentSchema)),
-  createRun: (job_url: string, task?: string) => request("/api/v1/runs", runSchema, { method: "POST", body: JSON.stringify({ job_url, task: task || null }) }),
+  createRun: (job_url: string, task?: string, promptVariant?: string) =>
+    request("/api/v1/runs", runSchema, { method: "POST", body: JSON.stringify({ job_url, task: task || null, prompt_variant: promptVariant || null }) }),
+  promptVariants: () => request("/api/v1/prompts", z.array(promptVariantSchema)),
   sendContext: (runId: string, content: string) => request(`/api/v1/runs/${runId}/context`, contextMessageSchema, { method: "POST", body: JSON.stringify({ content }) }),
   cancel: (id: string) => request(`/api/v1/runs/${id}/cancel`, runSchema, { method: "POST" }),
   focus: (id: string) => request(`/api/v1/runs/${id}/focus`, runSchema, { method: "POST" }),

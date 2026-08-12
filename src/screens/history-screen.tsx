@@ -93,7 +93,8 @@ export function HistoryScreen({ runs, onOpen }: { runs: Run[]; onOpen(run: Run):
               <th className="w-[14%] px-4 py-3 font-medium">Status</th>
               <th className="w-[14%] px-4 py-3 font-medium">Phase</th>
               <th className="w-[16%] px-4 py-3 font-medium">Outcome</th>
-              <th className="w-[22%] px-4 py-3 font-medium">Started</th>
+              <th className="w-[18%] px-4 py-3 font-medium">Prompt</th>
+              <th className="w-[18%] px-4 py-3 font-medium">Started</th>
               <th className="w-12" />
             </tr>
           </thead>
@@ -118,6 +119,16 @@ export function HistoryScreen({ runs, onOpen }: { runs: Run[]; onOpen(run: Run):
                   </td>
                   <td className="px-4 py-3 capitalize text-zinc-600 dark:text-zinc-300">{run.phase.replaceAll("_", " ")}</td>
                   <td className="px-4 py-3 capitalize text-zinc-600 dark:text-zinc-300">{run.outcome?.replaceAll("_", " ") || "—"}</td>
+                  <td className="px-4 py-3">
+                    {run.prompt_variant ? (
+                      <span className="inline-flex max-w-full items-center gap-1.5 rounded-md bg-zinc-100 px-2 py-0.5 font-mono text-[10px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400" title={`prompt sha ${run.prompt_sha ?? ""}`}>
+                        <span className="truncate">{run.prompt_variant}</span>
+                        {run.prompt_sha && <span className="text-zinc-400 dark:text-zinc-600">#{run.prompt_sha.slice(0, 6)}</span>}
+                      </span>
+                    ) : (
+                      <span className="text-zinc-300 dark:text-zinc-700">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-zinc-500 dark:text-zinc-400">{formatDate(run.started_at || run.created_at)}</td>
                   <td>
                     <button
