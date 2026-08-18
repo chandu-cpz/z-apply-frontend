@@ -9,6 +9,7 @@ import type {
   liveActivityEventSchema,
   liveViewSchema,
   profileSchema,
+  providerCatalogItemSchema,
   runSchema,
   runStatusSchema,
   settingsSchema,
@@ -26,3 +27,5 @@ export type Diagnostics = z.infer<typeof diagnosticsSchema>;
 export type Settings = z.infer<typeof settingsSchema>;
 export type CandidateProfile = z.infer<typeof profileSchema>;
 export type CandidateDocument = z.infer<typeof documentSchema>;
+export type ProviderCatalogItem = z.infer<typeof providerCatalogItemSchema>;
+

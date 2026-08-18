@@ -11,6 +11,7 @@ import {
   liveViewSchema,
   profileSchema,
   promptVariantSchema,
+  providerCatalogItemSchema,
   runSchema,
   settingsSchema,
 } from "./schemas";
@@ -51,10 +52,25 @@ export const api = {
   settings: () => request("/api/v1/settings", settingsSchema),
   profile: () => request("/api/v1/profile", profileSchema),
   documents: () => request("/api/v1/documents", z.array(documentSchema)),
-  createRun: (job_url: string, task?: string, promptVariant?: string) =>
-    request("/api/v1/runs", runSchema, { method: "POST", body: JSON.stringify({ job_url, task: task || null, prompt_variant: promptVariant || null }) }),
+  providers: () => request("/api/v1/providers", z.array(providerCatalogItemSchema)),
+  createRun: (job_url: string, task?: string, promptVariant?: string, provider?: string, model?: string) =>
+    request("/api/v1/runs", runSchema, {
+      method: "POST",
+      body: JSON.stringify({
+        job_url,
+        task: task || null,
+        prompt_variant: promptVariant || null,
+        provider: provider || null,
+        model: model || null,
+      }),
+    }),
   promptVariants: () => request("/api/v1/prompts", z.array(promptVariantSchema)),
   sendContext: (runId: string, content: string) => request(`/api/v1/runs/${runId}/context`, contextMessageSchema, { method: "POST", body: JSON.stringify({ content }) }),
+  switchModel: (runId: string, provider: string, model?: string) =>
+    request(`/api/v1/runs/${runId}/model`, runSchema, {
+      method: "POST",
+      body: JSON.stringify({ provider, model: model || null }),
+    }),
   cancel: (id: string) => request(`/api/v1/runs/${id}/cancel`, runSchema, { method: "POST" }),
   focus: (id: string) => request(`/api/v1/runs/${id}/focus`, runSchema, { method: "POST" }),
   closeBrowser: (id: string) => request(`/api/v1/runs/${id}/browser`, runSchema, { method: "DELETE" }),

@@ -1,3 +1,6 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { api } from "../api";
 import type { Run } from "../types";
 import { MessageList } from "./chat/message-list";
 import { Composer } from "./chat/composer";
@@ -10,11 +13,31 @@ interface Props {
   onStop?(): void;
   onAnswer?(requestId: string, answer: string): void;
   onDecide?(requestId: string, decision: "approve" | "reject"): void;
+  onSwitchModel?(provider: string, model: string): void;
 }
 
-export function AgentConversation({ run, events, busy = false, onSendContext, onStop, onAnswer, onDecide }: Props) {
+export function AgentConversation({ run, events, busy = false, onSendContext, onStop, onAnswer, onDecide, onSwitchModel }: Props) {
+  const query = useQueryClient();
   const streaming = run.status === "running" || run.status === "starting";
   const status = streaming && run.current_model ? `Streaming · ${run.current_model.split("/").pop()}` : streaming ? "Streaming" : undefined;
+
+  const switchModelMutation = useMutation({
+    mutationFn: ({ provider, model }: { provider: string; model: string }) => api.switchModel(run.id, provider, model),
+    onSuccess: (updatedRun) => {
+      query.setQueryData(["run", run.id], updatedRun);
+      query.invalidateQueries({ queryKey: ["runs"] });
+      toast.success("Active model updated", {
+        description: `Switched to ${updatedRun.current_model || "new model"} for next steps.`,
+      });
+      if (onSwitchModel) onSwitchModel(updatedRun.current_agent || "", updatedRun.current_model || "");
+    },
+    onError: (error) => toast.error("Unable to switch model", { description: error.message }),
+  });
+
+  const handleSwitchModel = (provider: string, model: string) => {
+    switchModelMutation.mutate({ provider, model });
+  };
+
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="min-h-0 flex-1">
@@ -24,6 +47,8 @@ export function AgentConversation({ run, events, busy = false, onSendContext, on
         disabled={run.status === "terminal" || busy}
         streaming={streaming}
         status={status}
+        selectedModel={run.current_model || undefined}
+        onSwitchModel={handleSwitchModel}
         placeholder={run.status === "terminal" ? "This run has ended" : "Steer the agent, correct a fact, or add context…"}
         onSend={onSendContext}
         onStop={onStop}
@@ -31,3 +56,4 @@ export function AgentConversation({ run, events, busy = false, onSendContext, on
     </section>
   );
 }
+

@@ -140,3 +140,14 @@ export const contextMessageSchema = z.object({
   source: z.string(),
   accepted_at: z.string(),
 });
+
+export const providerCatalogItemSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  default_model: z.string(),
+  suggested_models: z.array(z.string()),
+  env_key: z.string(),
+  configured: z.boolean(),
+  is_default: z.boolean(),
+});
+
