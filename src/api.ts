@@ -71,6 +71,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ provider, model: model || null }),
     }),
+  setReasoning: (runId: string, reasoning: "auto" | "off" | "on", reasoningEffort?: "low" | "medium" | "high" | "max" | null) =>
+    request(`/api/v1/runs/${runId}/reasoning`, runSchema, {
+      method: "POST",
+      body: JSON.stringify({ reasoning, reasoning_effort: reasoningEffort || null }),
+    }),
   cancel: (id: string) => request(`/api/v1/runs/${id}/cancel`, runSchema, { method: "POST" }),
   focus: (id: string) => request(`/api/v1/runs/${id}/focus`, runSchema, { method: "POST" }),
   closeBrowser: (id: string) => request(`/api/v1/runs/${id}/browser`, runSchema, { method: "DELETE" }),

@@ -23,11 +23,18 @@ export const runSchema = z.object({
   summary: z.string().nullable(),
   current_agent: z.string().nullable(),
   current_model: z.string().nullable(),
+  current_provider: z.string().nullable().optional().default(null),
   browser_tab_state: z.string(),
   latest_run_sequence: z.number().int().nonnegative(),
   created_at: z.string(),
   started_at: z.string().nullable(),
   finished_at: z.string().nullable(),
+  current_reasoning: z.enum(["auto", "off", "on"]).optional().default("auto"),
+  current_reasoning_effort: z
+    .enum(["low", "medium", "high", "max"])
+    .nullable()
+    .optional()
+    .default(null),
 });
 
 export const promptVariantSchema = z.object({

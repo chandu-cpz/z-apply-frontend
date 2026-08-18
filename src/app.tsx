@@ -212,7 +212,7 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
   const action = useMutation({ mutationFn: async (operation: () => Promise<unknown>) => operation(), onSuccess: refresh, onError: (error) => toast.error("Action could not be completed", { description: error.message }) });
   const humanControl = live.data?.control_mode === "human_control" && live.data.focused_run_id === run.id;
   const openRun = (nextRun: Run) => { onSelect(nextRun); if (nextRun.status !== "terminal") action.mutate(() => api.focus(nextRun.id)); };
-  const takeControl = () => action.mutate(async () => { await api.focus(run.id); return api.takeControl(run.id); });
+  const takeControl = () => action.mutate(() => api.takeControl(run.id));
 
   const browser = <BrowserPanel run={run} live={live.data} busy={action.isPending} returning={returningControl} onFocus={() => action.mutate(() => api.focus(run.id))} onControl={takeControl} onReturn={() => { setReturningControl(true); action.mutate(() => api.returnControl(run.id), { onSuccess: () => setReturningControl(false), onError: () => setReturningControl(false) }); }} onClose={() => action.mutate(() => api.closeBrowser(run.id))}/>;
   const sendContext = (content: string) => action.mutate(() => api.sendContext(run.id, content), { onSuccess: () => toast.success("Steering context delivered to the active agent") });

@@ -3,6 +3,7 @@ import { Send, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ModelCascadingPicker } from "../model-cascading-picker";
+import { ReasoningPicker, type ReasoningEffort, type ReasoningMode } from "./reasoning-picker";
 
 interface ComposerProps {
   disabled: boolean;
@@ -11,9 +12,12 @@ interface ComposerProps {
   status?: string;
   selectedProvider?: string;
   selectedModel?: string;
+  selectedReasoning?: ReasoningMode;
+  selectedReasoningEffort?: ReasoningEffort | null;
   onSend(content: string): void;
   onStop?(): void;
   onSwitchModel?(provider: string, model: string): void;
+  onSetReasoning?(reasoning: ReasoningMode, effort: ReasoningEffort | null): void;
 }
 
 const MAX_ROWS = 6;
@@ -25,9 +29,12 @@ export function Composer({
   status,
   selectedProvider,
   selectedModel,
+  selectedReasoning,
+  selectedReasoningEffort,
   onSend,
   onStop,
   onSwitchModel,
+  onSetReasoning,
 }: ComposerProps) {
   const [content, setContent] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -82,6 +89,15 @@ export function Composer({
                 selectedModel={selectedModel}
                 onSelect={onSwitchModel}
                 variant="compact"
+                direction="up"
+                disabled={disabled}
+              />
+            )}
+            {onSetReasoning && (
+              <ReasoningPicker
+                selectedReasoning={selectedReasoning}
+                selectedEffort={selectedReasoningEffort}
+                onSelect={onSetReasoning}
                 direction="up"
                 disabled={disabled}
               />
