@@ -34,7 +34,7 @@ function metrics(sequence: number): LiveActivityEvent {
     type: "stream.metrics",
     source: { component: "graph", agent: "researcher" },
     level: "info",
-    payload: { model: "deepseek/v3", provider: "nim", ttft_ms: 180, tok_per_second: 42.5, output_tokens_estimate: 640, duration_ms: 15200 },
+    payload: { model: "deepseek/v3", provider: "opengateway", ttft_ms: 180, tok_per_second: 42.5, output_tokens_estimate: 640, duration_ms: 15200 },
   };
 }
 
@@ -92,7 +92,7 @@ describe("mergeLive v2", () => {
     const agents = mergeLive([metrics(1), delta(2, "text", "hi")], new Map());
     expect(agents[0].metrics).toEqual({
       model: "deepseek/v3",
-      provider: "nim",
+      provider: "opengateway",
       ttftMs: 180,
       tokPerSecond: 42.5,
       outputTokens: 640,

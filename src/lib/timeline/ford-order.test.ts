@@ -1,10 +1,12 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildTimeline } from "./build";
 import type { ActivityEvent } from "../../types";
 
+const FIXTURE = "/tmp/ford-events.jsonl";
+
 function realEvents(): ActivityEvent[] {
-  const lines = readFileSync("/tmp/ford-events.jsonl", "utf-8").trim().split("\n");
+  const lines = readFileSync(FIXTURE, "utf-8").trim().split("\n");
   return lines.map((line) => JSON.parse(line) as ActivityEvent);
 }
 
@@ -17,7 +19,7 @@ function collectTurnSeqs(items: ReturnType<typeof buildTimeline>): number[] {
   return seqs;
 }
 
-describe("buildTimeline with the real Ford run", () => {
+describe.skipIf(!existsSync(FIXTURE))("buildTimeline with the real Ford run", () => {
   it("renders turns -> stall -> checkpoints in chronological order", () => {
     const events = realEvents();
     const items = buildTimeline(events);

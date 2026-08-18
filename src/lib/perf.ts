@@ -36,7 +36,6 @@ const RATES: Record<string, { input: number; output: number; cache: number }> = 
   agnes: { input: 0.15, output: 0.4, cache: 0.15 },
   inferx: { input: 0.14, output: 0.28, cache: 0.0028 },
   opengateway: { input: 0.15, output: 0.4, cache: 0.15 },
-  nim: { input: 0.15, output: 0.4, cache: 0.15 },
 };
 
 const DEFAULT_RATE = { input: 0.15, output: 0.4, cache: 0.15 };

@@ -1,15 +1,17 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildTimeline } from "./build";
 import type { ActivityEvent } from "../../types";
 import type { TimelineItem } from "./types";
 
+const FIXTURE = "/tmp/intugine-events.jsonl";
+
 function realEvents(): ActivityEvent[] {
-  const lines = readFileSync("/tmp/intugine-events.jsonl", "utf-8").trim().split("\n");
+  const lines = readFileSync(FIXTURE, "utf-8").trim().split("\n");
   return lines.map((line) => JSON.parse(line) as ActivityEvent);
 }
 
-describe("buildTimeline with the live Intugine run", () => {
+describe.skipIf(!existsSync(FIXTURE))("buildTimeline with the live Intugine run", () => {
   it("places the approval + feedback cards chronologically (mid-thread), not at the end", () => {
     const items = buildTimeline(realEvents());
 
@@ -78,7 +80,7 @@ describe("buildTimeline with the live Intugine run", () => {
   });
 });
 
-describe("top-level ordering", () => {
+describe.skipIf(!existsSync(FIXTURE))("top-level ordering", () => {
   it("shows the final top-level sequence", () => {
     const items = buildTimeline(realEvents());
     const seq = items.map((item) => {
