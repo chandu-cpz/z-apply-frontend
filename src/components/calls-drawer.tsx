@@ -40,8 +40,11 @@ export function CallsDrawer({ runId, onClose }: { runId: string; onClose(): void
               <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 dark:border-zinc-800 dark:bg-zinc-900">
                 {totals.calls} calls
               </span>
-              <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 dark:border-zinc-800 dark:bg-zinc-900">
-                {fmtNum(totals.input_tokens)}→{fmtNum(totals.output_tokens)}
+              <span
+                className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 dark:border-zinc-800 dark:bg-zinc-900"
+                title={`${fmtNum(totals.input_tokens)} gross in · ${fmtNum(totals.cache_read_tokens)} cached`}
+              >
+                {fmtNum(totals.new_input_tokens)}→{fmtNum(totals.output_tokens)}
               </span>
               <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-violet-700 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300">
                 {usd(totals.cost_usd)}
@@ -107,7 +110,12 @@ export function CallsDrawer({ runId, onClose }: { runId: string; onClose(): void
                     <td className="px-4 py-2.5 text-zinc-500 dark:text-zinc-400">total</td>
                     <td className="px-2 py-2.5 text-zinc-500 dark:text-zinc-400">{totals.calls} calls</td>
                     <td className="px-2 py-2.5" />
-                    <td className="px-2 py-2.5 text-right text-zinc-800 dark:text-zinc-200">{fmtNum(totals.input_tokens)}</td>
+                    <td
+                      className="px-2 py-2.5 text-right text-zinc-800 dark:text-zinc-200"
+                      title={`${fmtNum(totals.input_tokens)} gross in`}
+                    >
+                      {fmtNum(totals.new_input_tokens)}
+                    </td>
                     <td className="px-2 py-2.5 text-right text-zinc-800 dark:text-zinc-200">{fmtNum(totals.output_tokens)}</td>
                     <td className="px-2 py-2.5 text-right text-zinc-600 dark:text-zinc-300">{pct(totals.cache_read_tokens, totals.input_tokens)}</td>
                     <td className="px-2 py-2.5" colSpan={2} />

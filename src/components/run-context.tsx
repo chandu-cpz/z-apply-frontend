@@ -2,7 +2,6 @@ import { Ban, BriefcaseBusiness, CheckCircle2, ExternalLink, PanelRight, Receipt
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api";
-import { useModelPerformance } from "../lib/perf";
 import type { Artifact, Run } from "../types";
 import { CallsDrawer } from "./calls-drawer";
 
@@ -144,13 +143,14 @@ function byKind(artifacts: Artifact[] | undefined, kind: string): Artifact | und
 }
 
 function RunStats({ runId }: { runId: string }) {
-  const perf = useModelPerformance(runId);
-  const calls = perf.reduce((sum, item) => sum + item.calls, 0);
-  const inTokens = perf.reduce((sum, item) => sum + item.totalInputTokens, 0);
-  const outTokens = perf.reduce((sum, item) => sum + item.totalOutputTokens, 0);
-  const cacheRate = perf.length ? perf.reduce((sum, item) => sum + item.cacheHitRate, 0) / perf.length : 0;
-  const costUsd = perf.reduce((sum, item) => sum + item.costUsd, 0);
-  if (calls === 0) return null;
+  const { data } = useQuery({
+    queryKey: ["calls", runId],
+    queryFn: () => api.calls(runId),
+  });
+  const totals = data?.totals;
+  const calls = data?.calls ?? [];
+  if (!totals || totals.calls === 0) return null;
+  const cacheRate = totals.input_tokens > 0 ? totals.cache_read_tokens / totals.input_tokens : 0;
   const cell = "rounded-lg border border-border bg-card px-2 py-1.5";
   const value = "block font-mono text-[13px] font-semibold text-foreground";
   const label = "block text-[10px] text-muted-foreground";
@@ -158,12 +158,12 @@ function RunStats({ runId }: { runId: string }) {
     <div className="rounded-xl border border-border bg-card p-3">
       <p className="text-[11px] font-medium text-muted-foreground">Run stats</p>
       <div className="mt-2 grid grid-cols-3 gap-1.5">
-        <div className={cell}><span className={value}>{calls}</span><span className={label}>calls</span></div>
-        <div className={cell}><span className={value}>{fmtCompact(inTokens)}</span><span className={label}>in tokens</span></div>
-        <div className={cell}><span className={value}>{fmtCompact(outTokens)}</span><span className={label}>out</span></div>
+        <div className={cell}><span className={value}>{totals.calls}</span><span className={label}>calls</span></div>
+        <div className={cell}><span className={value}>{fmtCompact(totals.new_input_tokens)}</span><span className={label}>in tokens</span></div>
+        <div className={cell}><span className={value}>{fmtCompact(totals.output_tokens)}</span><span className={label}>out</span></div>
         <div className={cell}><span className={value}>{cacheRate > 0 ? `${(cacheRate * 100).toFixed(0)}%` : "—"}</span><span className={label}>cache</span></div>
-        <div className={cell}><span className={value}>${costUsd.toFixed(3)}</span><span className={label}>cost</span></div>
-        <div className={cell}><span className={value}>{perf[0] ? perf[0].model.split("-")[0] : "—"}</span><span className={label}>model</span></div>
+        <div className={cell}><span className={value}>${totals.cost_usd.toFixed(3)}</span><span className={label}>cost</span></div>
+        <div className={cell}><span className={value}>{calls[0] ? calls[0].model.split("-")[0] : "—"}</span><span className={label}>model</span></div>
       </div>
     </div>
   );
