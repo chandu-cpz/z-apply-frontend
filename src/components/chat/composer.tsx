@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Send, Square } from "lucide-react";
+import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ModelCascadingPicker } from "../model-cascading-picker";
@@ -50,7 +50,7 @@ export function Composer({
 
   const submit = () => {
     const value = content.trim();
-    if (!value || disabled || streaming) return;
+    if (!value || disabled) return;
     onSend(value);
     setContent("");
   };
@@ -111,22 +111,16 @@ export function Composer({
               <span className="hidden truncate sm:inline">Shift+Enter for a new line</span>
             )}
           </div>
-          {streaming && onStop ? (
-            <Button type="button" size="icon" variant="outline" onClick={stop} title="Stop (Esc)" className="rounded-full">
-              <Square size={14} className="fill-current" />
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              size="icon"
-              onClick={submit}
-              disabled={disabled || !content.trim()}
-              title="Send"
-              className="rounded-full"
-            >
-              <Send size={14} />
-            </Button>
-          )}
+          <Button
+            type="button"
+            size="icon"
+            onClick={submit}
+            disabled={disabled || !content.trim()}
+            title="Send"
+            className="rounded-full"
+          >
+            <Send size={14} />
+          </Button>
         </div>
       </div>
     </div>
