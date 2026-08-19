@@ -15,8 +15,6 @@ export const runSchema = z.object({
   task: z.string(),
   company: z.string().nullable(),
   role: z.string().nullable(),
-  prompt_variant: z.string().nullable().optional(),
-  prompt_sha: z.string().nullable().optional(),
   status: runStatusSchema,
   phase: z.string(),
   outcome: z.string().nullable(),
@@ -35,12 +33,6 @@ export const runSchema = z.object({
     .nullable()
     .optional()
     .default(null),
-});
-
-export const promptVariantSchema = z.object({
-  name: z.string(),
-  sha: z.string(),
-  is_default: z.boolean(),
 });
 
 export const activityEventSchema = z.object({

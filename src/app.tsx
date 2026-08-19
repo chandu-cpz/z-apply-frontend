@@ -35,16 +35,14 @@ export function App() {
     mutationFn: ({
       url,
       task,
-      promptVariant,
       provider,
       model,
     }: {
       url: string;
       task: string;
-      promptVariant: string;
       provider?: string;
       model?: string;
-    }) => api.createRun(url, task, promptVariant, provider, model),
+    }) => api.createRun(url, task, provider, model),
     onSuccess: (run) => {
       query.setQueryData<Run[]>(["runs"], (old = []) => [run, ...old.filter((item) => item.id !== run.id)]);
       navigate({ name: "run", runId: run.id });
@@ -87,7 +85,7 @@ export function App() {
 
   return <div className={`${theme === "dark" ? "dark" : ""} min-h-screen bg-stone-100 font-sans text-stone-950 antialiased dark:bg-zinc-950 dark:text-zinc-100`}>
     <Header active={selected} route={route} streamStatus={streamStatus} navigate={navigate}/>
-    {route.name === "new" && <StartRun onSubmit={(url, task, promptVariant, provider, model) => create.mutate({ url, task, promptVariant, provider, model })}/>}
+    {route.name === "new" && <StartRun onSubmit={(url, task, provider, model) => create.mutate({ url, task, provider, model })}/>}
     {route.name === "history" && <HistoryScreen runs={runs.data ?? []} onOpen={(run) => navigate({ name: "run", runId: run.id })}/>}
     {route.name === "artifacts" && <ArtifactsScreen runs={runs.data ?? []}/>}
     {route.name === "settings" && <SettingsScreen/>}

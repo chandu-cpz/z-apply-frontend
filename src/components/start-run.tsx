@@ -1,30 +1,26 @@
 import { useState } from "react";
 import { ArrowRight, BriefcaseBusiness, Link, Sparkles } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { api } from "../api";
 import { Button } from "./ui/button";
 import { ModelCascadingPicker } from "./model-cascading-picker";
 
 const schema = z.object({
   url: z.url("Enter a complete job URL."),
   task: z.string().max(10_000).optional(),
-  promptVariant: z.string().optional(),
 });
 type Form = z.infer<typeof schema>;
 
 interface Props {
-  onSubmit(url: string, task: string, promptVariant: string, provider?: string, model?: string): void;
+  onSubmit(url: string, task: string, provider?: string, model?: string): void;
 }
 
 export function StartRun({ onSubmit }: Props) {
   const form = useForm<Form>({
     resolver: zodResolver(schema),
-    defaultValues: { url: "", task: "", promptVariant: "orchestrator.md" },
+    defaultValues: { url: "", task: "" },
   });
-  const variants = useQuery({ queryKey: ["promptVariants"], queryFn: api.promptVariants });
   const [selectedProvider, setSelectedProvider] = useState<string>("");
   const [selectedModel, setSelectedModel] = useState<string>("");
 
@@ -32,7 +28,6 @@ export function StartRun({ onSubmit }: Props) {
     onSubmit(
       data.url,
       data.task ?? "",
-      data.promptVariant ?? "orchestrator.md",
       selectedProvider || undefined,
       selectedModel || undefined,
     );
@@ -99,20 +94,6 @@ export function StartRun({ onSubmit }: Props) {
             rows={3}
             {...form.register("task")}
           />
-        </label>
-        <label className="mt-4 block text-xs text-stone-700 dark:text-zinc-200">
-          Prompt variant <em className="not-italic text-stone-400 dark:text-zinc-500">experimental</em>
-          <select
-            className="mt-2 w-full rounded-lg border border-stone-300 bg-white px-3 py-3 text-stone-950 outline-none focus:border-violet-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-            {...form.register("promptVariant")}
-          >
-            {(variants.data ?? []).map((v) => (
-              <option key={v.name} value={v.name}>
-                {v.name}
-                {v.is_default ? " (default)" : ""}
-              </option>
-            ))}
-          </select>
         </label>
         {form.formState.errors.url && (
           <p className="mt-2 text-xs text-rose-700 dark:text-rose-300">{form.formState.errors.url.message}</p>
