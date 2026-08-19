@@ -84,6 +84,7 @@ export const callLedgerSchema = z.object({
     input_tokens: z.number().int(),
     output_tokens: z.number().int(),
     cache_read_tokens: z.number().int(),
+    new_input_tokens: z.number().int(),
     cost_usd: z.number(),
   }),
   calls: z.array(
@@ -95,6 +96,7 @@ export const callLedgerSchema = z.object({
       input_tokens: z.number().int(),
       output_tokens: z.number().int(),
       cache_read_tokens: z.number().int(),
+      new_input_tokens: z.number().int(),
       ttft_ms: z.number().nullable(),
       duration_ms: z.number().nullable(),
       tok_per_second: z.number().nullable(),
