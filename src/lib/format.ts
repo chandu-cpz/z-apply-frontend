@@ -37,11 +37,11 @@ export function humanAgent(agent: string): string {
   return agent.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-export function hostnameOf(url: string): string {
+export function hostnameOf(url: string, fallback = "Application"): string {
   try {
     return new URL(url).hostname.replace("www.", "");
   } catch {
-    return "Application";
+    return fallback;
   }
 }
 

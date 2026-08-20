@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, BriefcaseBusiness } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { hostnameOf } from "@/lib/format";
+import { getRunStatusMeta } from "@/lib/run-status";
 import { mergeLive, turnBoundaries, EMPTY_LIVELY } from "@/lib/live";
 import { buildTimeline } from "@/lib/timeline/build";
 import type { LiveAgent } from "@/lib/live";
@@ -11,14 +13,6 @@ import { ToolMessage } from "./message-tool";
 import { ActivityGroup, HumanHandoffCard, ModelClusterRowCard, RecoveryRow, RunLabel, SectionDivider, StallRow, SubmissionApprovalCard, SystemRow } from "./message-row";import { flattenTimeline, groupRows, isQuiet, rowKey, rowSeq, type ChatRow } from "./rows";
 
 const FOLLOW_THRESHOLD_PX = 80;
-
-function hostname(url: string): string {
-  try {
-    return new URL(url).hostname.replace("www.", "");
-  } catch {
-    return "Application";
-  }
-}
 
 /** Telemetry as pills, not events: only what a human would care about.
  * No run lifecycle, no model selection (the message header shows the model),
@@ -67,19 +61,8 @@ function ActivityStrip({ activity }: { activity: ChatRow[] }) {
 }
 
 function RunHeader({ run }: { run: Run }) {
-  const submitted = run.outcome === "submitted_verified";
-  const failed = run.status === "terminal" && !submitted && run.outcome !== "cancelled";
-  const running = run.status === "running" || run.status === "starting";
-  const waiting = run.status === "waiting_human" || run.status === "human_control";
-  const chip = submitted
-    ? { label: "submitted", cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" }
-    : failed
-      ? { label: "failed", cls: "bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300" }
-      : waiting
-        ? { label: "needs you", cls: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200" }
-        : running
-          ? { label: "running", cls: "bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300" }
-          : { label: "finished", cls: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300" };
+  const meta = getRunStatusMeta(run);
+  const chip = { label: meta.label, cls: meta.cls };
   const started = new Date(run.started_at || run.created_at);
   const ended = run.finished_at ? new Date(run.finished_at) : new Date();
   const seconds = Math.max(0, Math.floor((ended.getTime() - started.getTime()) / 1000));
@@ -91,7 +74,7 @@ function RunHeader({ run }: { run: Run }) {
           <BriefcaseBusiness size={15} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">{run.company || hostname(run.job_url)}</p>
+          <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">{run.company || hostnameOf(run.job_url)}</p>
           <p className="truncate text-[11.5px] text-zinc-400 dark:text-zinc-500">{run.role || "Role details loading"}</p>
         </div>
         <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-medium", chip.cls)}>{chip.label}</span>
@@ -151,13 +134,14 @@ export function MessageList({ runId, events, run, onAnswer, onDecide }: { runId:
   const boundaries = useMemo(() => turnBoundaries(events), [events]);
   const live = useLiveStore((state) => state.byRun[runId] ?? EMPTY_LIVELY);
   const liveAgents = useMemo<LiveAgent[]>(() => mergeLive(live, boundaries), [live, boundaries]);
+  const timeline = useMemo(() => buildTimeline(events), [events]);
   // Thread = pure conversation; every system/telemetry row is pulled out into
   // a single "Activity" disclosure rendered under the run header. This is the
   // Claude/ChatGPT separation of conversation from activity: queued/started/
   // phase/model/auth/browser/recovery events never pollute the thread.
   const { rows, activity } = useMemo(() => {
     const flat: ChatRow[] = [];
-    flattenTimeline(buildTimeline(events), flat);
+    flattenTimeline(timeline, flat);
     for (const agent of liveAgents) flat.push({ kind: "assistant-live", agent });
     // Strict chronological order at the row level. Segment merging and
     // subagent nesting can pull turn content across the position of a
@@ -173,7 +157,7 @@ export function MessageList({ runId, events, run, onAnswer, onDecide }: { runId:
       else conversation.push(row);
     }
     return { rows: groupRows(conversation), activity: system };
-  }, [liveAgents, events]);
+  }, [timeline, liveAgents]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const followDown = useRef(true);

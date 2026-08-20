@@ -3,11 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api";
 import type { Artifact, Run } from "../types";
+import { hostnameOf } from "../lib/format";
+import { getRunStatusMeta } from "../lib/run-status";
 import { CallsDrawer } from "./calls-drawer";
 
 export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCancel(): void; onOpenSubagents(): void }) {
-  const submitted = run.outcome === "submitted_verified";
-  const failed = run.status === "terminal" && !submitted && run.outcome !== "cancelled";
+  const meta = getRunStatusMeta(run);
+  const submitted = meta.state === "submitted";
+  const failed = meta.state === "failed";
   const [callsOpen, setCallsOpen] = useState(false);
   return (
     <aside className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto border-r border-border bg-muted/40 p-3 dark:bg-zinc-950">
@@ -25,7 +28,7 @@ export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCan
         <div className="flex items-start gap-3">
           <span className="grid size-9 place-items-center rounded-lg bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-200"><BriefcaseBusiness size={18} /></span>
           <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold text-foreground">{run.company || hostname(run.job_url)}</h2>
+            <h2 className="truncate text-sm font-semibold text-foreground">{run.company || hostnameOf(run.job_url)}</h2>
             <p className="mt-1 truncate text-[13px] text-muted-foreground">{run.role || "Role details loading"}</p>
           </div>
         </div>
@@ -70,8 +73,6 @@ export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCan
     </aside>
   );
 }
-
-function hostname(url: string): string { try { return new URL(url).hostname.replace("www.", ""); } catch { return "Application"; } }
 
 function SubmissionSuccess({ run }: { run: Run }) {
   const { data: artifacts } = useQuery({
