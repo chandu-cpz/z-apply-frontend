@@ -16,15 +16,14 @@ export function AttentionBell() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        className="relative grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+        className={`relative grid size-8 place-items-center rounded-md hover:bg-muted ${waiting.length > 0 ? "text-warning" : "text-muted-foreground hover:text-foreground"}`}
         title="Runs waiting on you"
       >
         <Bell size={15} />
         {waiting.length > 0 && (
-          <>
-            <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-warning" />
-            <span className="sr-only">runs need attention</span>
-          </>
+          <span className="absolute -top-0.5 -right-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-warning px-1 text-[10px] font-semibold leading-none text-background tabular-nums">
+            {waiting.length}
+          </span>
         )}
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-2">

@@ -31,6 +31,7 @@ export function BrowserPanel({ run, live, returning = false, busy = false, onFoc
   // run focuses it (backend follows), so the panel always shows the run being
   // viewed and never a different run's screen.
   const showLive = focused && Boolean(websocketUrl);
+  const waiting = run.status === "waiting_human" || run.status === "human_control";
   return (
     <section className={`flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card ${human ? "border-warning/40" : "border-border"}`}>
       <header className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -39,7 +40,13 @@ export function BrowserPanel({ run, live, returning = false, busy = false, onFoc
       </header>
       {human && <div className="flex items-center gap-2 border-l-2 border-warning bg-warning/15 px-4 py-2 text-xs text-warning"><MousePointer2 size={14} /> You have browser control. Agent actions are paused.</div>}
       {anotherRunControlled && <div className="bg-primary/10 px-4 py-2 text-xs text-primary">Another application currently owns human control.</div>}
-      <GlowFrame><div className={`grid h-full min-h-0 flex-1 place-items-center ${showLive ? "bg-black" : "bg-muted/40"}`}>{showLive ? <NoVncCanvas websocketUrl={websocketUrl} viewOnly={!human} /> : <BrowserEmpty run={run} human={human} focused={focused} />}</div></GlowFrame>
+      <GlowFrame><div className={`relative grid h-full min-h-0 flex-1 place-items-center ${showLive ? "bg-black" : "bg-muted/40"}`}>{showLive ? <NoVncCanvas websocketUrl={websocketUrl} viewOnly={!human} /> : <BrowserEmpty run={run} human={human} focused={focused} />}
+        {waiting && showLive && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex h-24 items-end bg-gradient-to-t from-background/95 to-transparent pb-4 animate-in fade-in duration-300 motion-reduce:animate-none">
+            <p className="ml-4 flex items-center gap-2 border-l-2 border-warning pl-2 text-[13px] font-medium leading-snug text-foreground">Agent paused before submitting — review the screen, then decide</p>
+          </div>
+        )}
+      </div></GlowFrame>
       <footer className="flex items-center justify-between border-t border-border px-4 py-3"><span className="text-xs text-muted-foreground">{human ? "Interactive session" : focused ? "Viewing this run" : canControl ? "Focus required" : "No active browser"}</span>{human ? <button disabled={busy} className="rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50" onClick={onReturn}>Return to agent</button> : canControl && !anotherRunControlled && <button disabled={busy} className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50" onClick={onControl}><MousePointer2 size={14} /> Take control</button>}</footer>
       {!human && <div className="flex items-center justify-center gap-1.5 border-t border-border bg-muted/40 py-2 text-[10px] text-muted-foreground"><LockKeyhole size={12} /> View-only until you take control</div>}
     </section>

@@ -229,9 +229,10 @@ function ModelLine({ entry }: { entry: ModelEntry }) {
 }
 
 /** HITL checkpoint, fully interactive in the web UI:
- * - answered: a conversational exchange (assistant asks, user bubble answers)
- * - pending: MCQ options render as clickable buttons, free-text as an inline
- *   input — both answer through the API via onAnswer(request_id, value). */
+ * - pending: the loudest thing on screen — full-column elevated card with a
+ *   pulsing ring, oversized targets (h-10); MCQ options as stacked buttons,
+ *   free-text as an inline input, both answering via onAnswer(request_id, value)
+ * - answered/cancelled: collapsed to a single quiet line with a timestamp. */
 export function HumanHandoffCard({ item, onAnswer }: { item: Extract<TimelineItem, { kind: "human" }>; onAnswer?: (requestId: string, answer: string) => void }) {
   const question = item.question || item.detail || "The agent needs your input";
   const answer = item.answer;
@@ -248,15 +249,75 @@ export function HumanHandoffCard({ item, onAnswer }: { item: Extract<TimelineIte
     onAnswer(requestId, value.trim());
   };
 
+  // Pending peak treatment: break out of the row gutter (-mx-5 cancels the
+  // virtualized row's px-5) and elevate onto the approval surface. The glow
+  // is a Tailwind animate-pulse ring wrapper (reduced-motion aware).
+  if (answerable) {
+    return (
+      <div className="relative mb-4 -mx-5">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -inset-px animate-pulse rounded-xl border-2 border-warning/40 motion-reduce:animate-none"
+        />
+        <div className="relative rounded-xl border border-approval-border bg-approval px-4 py-3">
+          <div className="flex items-center gap-2">
+            <HelpCircle size={13} className="shrink-0 text-warning" />
+            <span className="truncate text-[11px] font-semibold tracking-wide text-warning">Checkpoint · your input needed</span>
+            <time className="ml-auto shrink-0 text-[10.5px] tabular-nums text-muted-foreground">{fmtTime(item.occurredAt)}</time>
+          </div>
+          <p className="mt-1.5 text-[13.5px] font-semibold leading-snug text-foreground">{question}</p>
+          <div className="mt-3">
+            {options.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                {options.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    disabled={sending}
+                    onClick={() => submit(option)}
+                    className="h-10 w-full rounded-lg border border-border bg-card px-3 text-left text-[13px] font-medium text-foreground transition hover:border-primary/40 hover:bg-primary/10 hover:text-primary disabled:opacity-50"
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <form
+                className="flex gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  submit(draft);
+                }}
+              >
+                <input
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  disabled={sending}
+                  placeholder="Type your answer…"
+                  className="h-10 min-w-0 flex-1 rounded-lg border border-border bg-card px-3 text-[13px] text-foreground placeholder:text-muted-foreground focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+                <button
+                  type="submit"
+                  disabled={sending || !draft.trim()}
+                  className="h-10 shrink-0 rounded-lg bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
+                >
+                  Send
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mb-4">
       <div className="flex items-start gap-2.5">
         <span
           className={cn(
             "mt-0.5 grid size-6 shrink-0 place-items-center rounded-lg",
-            cancelled
-              ? "bg-muted text-muted-foreground"
-              : "bg-warning/15 text-warning",
+            cancelled ? "bg-muted text-muted-foreground" : "bg-warning/15 text-warning",
           )}
         >
           <HelpCircle size={12} />
@@ -270,59 +331,18 @@ export function HumanHandoffCard({ item, onAnswer }: { item: Extract<TimelineIte
       </div>
 
       {cancelled ? (
-        <p className="mt-2 pl-9 text-[11.5px] text-muted-foreground">Cancelled — the run ended before this was answered.</p>
+        <p className="mt-2 pl-9 text-[11.5px] text-muted-foreground">
+          Cancelled — the run ended before this was answered.
+          <time className="ml-1.5 tabular-nums">{fmtTime(item.occurredAt)}</time>
+        </p>
       ) : answer ? (
-        <div className="mt-2 flex justify-end pl-10">
-          <div className="max-w-[80%]">
-            <p className="mb-0.5 pr-1 text-right text-[10.5px] font-medium text-muted-foreground">You</p>
-            <div className="rounded-2xl rounded-br-md bg-foreground px-3.5 py-2 text-[13px] leading-relaxed text-background">{answer}</div>
-            <p className="mt-0.5 pr-1 text-right text-[10.5px] tabular-nums text-muted-foreground">{item.resolvedAt ? fmtTime(item.resolvedAt) : ""}</p>
-          </div>
-        </div>
-      ) : answerable ? (
-        <div className="mt-2.5 pl-9">
-          {options.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5">
-              {options.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  disabled={sending}
-                  onClick={() => submit(option)}
-                  className="rounded-full border border-border bg-card px-3 py-1.5 text-[12.5px] text-foreground transition hover:border-primary/40 hover:bg-primary/10 hover:text-primary disabled:opacity-50"
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <form
-              className="flex max-w-md gap-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                submit(draft);
-              }}
-            >
-              <input
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                disabled={sending}
-                placeholder="Type your answer…"
-                className="min-w-0 flex-1 rounded-lg border border-border bg-card px-3 py-1.5 text-[12.5px] text-foreground placeholder:text-muted-foreground focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
-              <button
-                type="submit"
-                disabled={sending || !draft.trim()}
-                className="shrink-0 rounded-lg bg-primary px-3.5 py-1.5 text-[12.5px] font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
-              >
-                Send
-              </button>
-            </form>
-          )}
-        </div>
+        <p className="mt-2 pl-9 text-[12.5px] text-muted-foreground">
+          Answered · <span className="text-foreground">{answer}</span>
+          <time className="ml-1.5 tabular-nums">{item.resolvedAt ? fmtTime(item.resolvedAt) : ""}</time>
+        </p>
       ) : (
         <div className="mt-2 flex items-center gap-1.5 pl-9">
-          <span className="size-2.5 animate-pulse rounded-full border-[1.5px] border-warning border-t-transparent" />
+          <span className="size-2.5 animate-pulse rounded-full border-[1.5px] border-warning border-t-transparent motion-reduce:animate-none" />
           <span className="text-[12px] text-warning">Waiting for your answer…</span>
         </div>
       )}
@@ -346,8 +366,10 @@ export function StallRow({ item }: { item: Extract<TimelineItem, { kind: "stall"
   );
 }
 
-/** Final submission approval, inline in the chat: a compact IRREVERSIBLE ACTION
- * card with Approve/Reject, resolved state shows the decision. */
+/** Final submission approval, inline in the chat.
+ * - pending: full-column elevated card with a pulsing ring, oversized h-10
+ *   Approve/Reject targets and keyboard hints (wiring happens elsewhere)
+ * - resolved: collapsed to a single quiet line with a tabular-nums timestamp. */
 export function SubmissionApprovalCard({
   item,
   onDecide,
@@ -365,25 +387,44 @@ export function SubmissionApprovalCard({
     onDecide(requestId, decision);
   };
 
-  return (
-    <div className="mb-3 overflow-hidden rounded-xl border border-approval-border bg-approval px-3.5 py-2.5">
-      <div className="flex items-center gap-2">
-        <ShieldAlert size={13} className={cn("shrink-0", resolved ? (item.decision === "approved" ? "text-success" : "text-destructive") : "text-destructive")} />
-        <span className={cn("text-[11px] font-semibold tracking-wide", resolved ? (item.decision === "approved" ? "text-success" : "text-destructive") : "text-destructive")}>
-          {resolved ? (item.decision === "approved" ? "Submission approved" : "Submission rejected") : "Irreversible action"}
+  // Resolved collapse: one quiet line — decision · responder · time.
+  if (resolved) {
+    return (
+      <div className="mb-3 flex items-center gap-2 px-0.5 py-0.5">
+        <span className={cn("size-1 shrink-0 rounded-full", item.decision === "approved" ? "bg-success" : "bg-destructive")} />
+        <span className={cn("min-w-0 truncate text-[12px]", item.decision === "approved" ? "text-success" : "text-destructive")}>
+          {item.decision === "approved" ? "Approved" : "Rejected"}
+          {item.detail ? ` · ${item.detail}` : ""}
         </span>
-        {!resolved && <span className="hidden text-[10.5px] text-destructive/70 sm:inline">· requires your approval</span>}
-        <time className="ml-auto shrink-0 text-[10.5px] tabular-nums text-muted-foreground">{fmtTime(item.occurredAt)}</time>
+        <time className="ml-auto shrink-0 text-[10.5px] tabular-nums text-muted-foreground">{fmtTime(item.decidedAt || item.occurredAt)}</time>
       </div>
-      <p className="mt-1.5 text-[13px] font-medium text-foreground">{item.question || item.detail || "Submit this application?"}</p>
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        {!resolved && requestId && onDecide && (
-          <>
+    );
+  }
+
+  // Pending peak treatment: break out of the row gutter (-mx-5 cancels the
+  // virtualized row's px-5) and elevate onto the approval surface, with a
+  // Tailwind animate-pulse ring wrapper as the border glow (reduced-motion aware).
+  return (
+    <div className="relative mb-3 -mx-5">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -inset-px animate-pulse rounded-xl border-2 border-warning/40 motion-reduce:animate-none"
+      />
+      <div className="relative overflow-hidden rounded-xl border border-approval-border bg-approval px-4 py-3">
+        <div className="flex items-center gap-2">
+          <ShieldAlert size={13} className="shrink-0 text-destructive" />
+          <span className="text-[11px] font-semibold tracking-wide text-destructive">Irreversible action</span>
+          <span className="hidden text-[10.5px] text-destructive/70 sm:inline">· requires your approval</span>
+          <time className="ml-auto shrink-0 text-[10.5px] tabular-nums text-muted-foreground">{fmtTime(item.occurredAt)}</time>
+        </div>
+        <p className="mt-1.5 text-[13.5px] font-semibold leading-snug text-foreground">{item.question || item.detail || "Submit this application?"}</p>
+        {requestId && onDecide && (
+          <div className="mt-3 grid grid-cols-2 gap-2">
             <button
               type="button"
               disabled={sending}
               onClick={() => decide("approve")}
-              className="rounded-lg bg-destructive px-3 py-1 text-[12px] font-medium text-white transition hover:bg-destructive/90 disabled:opacity-50"
+              className="h-10 rounded-lg bg-destructive px-3 text-[13px] font-semibold text-white transition hover:bg-destructive/90 disabled:opacity-50"
             >
               Approve submission
             </button>
@@ -391,28 +432,35 @@ export function SubmissionApprovalCard({
               type="button"
               disabled={sending}
               onClick={() => decide("reject")}
-              className="rounded-lg border border-border bg-card px-3 py-1 text-[12px] font-medium text-foreground transition hover:bg-muted disabled:opacity-50"
+              className="h-10 rounded-lg border border-border bg-card px-3 text-[13px] font-semibold text-foreground transition hover:bg-muted disabled:opacity-50"
             >
               Reject
             </button>
-          </>
+          </div>
+        )}
+        {requestId && onDecide && (
+          <p className="mt-2 flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
+            <kbd className="rounded border border-border bg-card px-1 font-mono text-[10px]">A</kbd> approve
+            <span aria-hidden>·</span>
+            <kbd className="rounded border border-border bg-card px-1 font-mono text-[10px]">R</kbd> reject
+          </p>
         )}
         {item.context && (
           <button
             type="button"
             onClick={() => setShowContext((value) => !value)}
-            className="ml-auto flex items-center gap-1 px-1 text-[11px] text-muted-foreground hover:text-foreground"
+            className="mt-1 flex items-center gap-1 px-1 text-[11px] text-muted-foreground hover:text-foreground"
           >
             <ChevronRight size={11} className={cn("transition-transform", showContext && "rotate-90")} />
             Review evidence
           </button>
         )}
+        {showContext && item.context && (
+          <pre className="mt-2 max-h-56 overflow-auto rounded-lg bg-card/80 px-3 py-2 font-mono text-[12.5px] leading-5 tabular-nums whitespace-pre-wrap text-muted-foreground">
+            {item.context}
+          </pre>
+        )}
       </div>
-      {showContext && item.context && (
-        <pre className="mt-2 max-h-56 overflow-auto rounded-lg bg-card/80 px-3 py-2 font-mono text-[12.5px] leading-5 tabular-nums whitespace-pre-wrap text-muted-foreground">
-          {item.context}
-        </pre>
-      )}
     </div>
   );
 }
