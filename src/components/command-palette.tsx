@@ -19,7 +19,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
       <CommandList>
         <CommandEmpty>No matches.</CommandEmpty>
         <CommandGroup heading="Navigate">
-          <CommandItem onSelect={() => { close(); void navigate({ to: "/" }); }}>
+          <CommandItem onSelect={() => { close(); void navigate({ to: "/new" }); }}>
             <Plus />
             <span>New application</span>
           </CommandItem>

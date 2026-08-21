@@ -1,6 +1,6 @@
 import { createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
 import { z } from "zod";
-import { AppShell, ArtifactsWorkspace, HistoryWorkspace, NewApplicationScreen, NotFound, RunWorkspace } from "./app";
+import { AppShell, ArtifactsWorkspace, HistoryWorkspace, HomeGate, NewApplicationScreen, NotFound, RunWorkspace } from "./app";
 import { DiagnosticsScreen } from "./screens/diagnostics-screen";
 import { SettingsScreen } from "./screens/settings-screen";
 import { RouteErrorBoundary } from "./components/route-error-boundary";
@@ -14,7 +14,12 @@ const rootRoute = createRootRoute({
   errorComponent: RouteErrorBoundary,
 });
 
-const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: "/", component: NewApplicationScreen });
+/** "/" is the operator's question "what is my agent doing right now?".
+ * The gate routes to the newest live run's cockpit; with no live run it
+ * shows the launch form (never used) or the queue (runs exist, all done).
+ * The launch form itself also owns /new directly. */
+const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: "/", component: HomeGate });
+const newRoute = createRoute({ getParentRoute: () => rootRoute, path: "/new", component: NewApplicationScreen });
 const runRoute = createRoute({ getParentRoute: () => rootRoute, path: "/runs/$runId", component: RunWorkspace });
 
 /** History list state lives in the URL so filtered views are shareable. */
@@ -35,7 +40,7 @@ const artifactsRoute = createRoute({ getParentRoute: () => rootRoute, path: "/ar
 const settingsRoute = createRoute({ getParentRoute: () => rootRoute, path: "/settings", component: SettingsScreen });
 const diagnosticsRoute = createRoute({ getParentRoute: () => rootRoute, path: "/diagnostics", component: DiagnosticsScreen });
 
-const routeTree = rootRoute.addChildren([indexRoute, runRoute, historyRoute, artifactsRoute, settingsRoute, diagnosticsRoute]);
+const routeTree = rootRoute.addChildren([indexRoute, newRoute, runRoute, historyRoute, artifactsRoute, settingsRoute, diagnosticsRoute]);
 
 export const router = createRouter({ routeTree });
 

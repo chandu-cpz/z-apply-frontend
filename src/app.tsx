@@ -91,7 +91,7 @@ export function AppShell() {
         if (composer) composer.focus();
         else setPaletteOpen(true);
       } else if (event.key === "n") {
-        void navigate({ to: "/" });
+        void navigate({ to: "/new" });
       } else if (event.key === "g") {
         gPressedAt.current = Date.now();
       } else if (event.key === "r" && Date.now() - gPressedAt.current <= 800) {
@@ -116,10 +116,45 @@ export function NotFound() {
     <main className="grid min-h-[calc(100dvh_-_3.75rem)] place-items-center p-8 text-center">
       <div>
         <p className="text-sm text-muted-foreground">This page does not exist.</p>
-        <button className="mt-3 rounded-lg border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground shadow-sm hover:border-primary/40 hover:text-primary" onClick={() => navigate({ to: "/" })}>
+        <button className="mt-3 rounded-lg border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground shadow-sm hover:border-primary/40 hover:text-primary" onClick={() => navigate({ to: "/new" })}>
           Start a new application
         </button>
       </div>
+    </main>
+  );
+}
+
+const ACTIVE_STATUSES = new Set(["queued", "starting", "running", "waiting_human", "human_control"]);
+
+function startedAtMs(run: Run): number {
+  return new Date(run.started_at || run.created_at).getTime();
+}
+
+/** The operator's default state is "what is my agent doing right now?"
+ * "/" answers it: the newest live run's cockpit. No live run means either
+ * nothing has ever run (launch form) or everything is done (queue). */
+export function HomeGate() {
+  const navigate = useNavigate();
+  const runsQuery = useQuery({ queryKey: ["runs"], queryFn: api.runs, staleTime: Infinity });
+  useEffect(() => {
+    if (!runsQuery.isSuccess) return;
+    // Decide from the query payload, NOT the sync store: AppShell seeds the
+    // store in a parent effect, and child effects flush first — useRuns()
+    // would still be empty on the render where this query resolves.
+    const runs = runsQuery.data ?? [];
+    if (runs.length === 0) {
+      void navigate({ to: "/new", replace: true });
+      return;
+    }
+    const active = runs
+      .filter((run) => ACTIVE_STATUSES.has(run.status))
+      .sort((a, b) => startedAtMs(b) - startedAtMs(a))[0];
+    if (active) void navigate({ to: "/runs/$runId", params: { runId: active.id }, replace: true });
+    else void navigate({ to: "/history", replace: true });
+  }, [runsQuery.isSuccess, runsQuery.data, navigate]);
+  return (
+    <main className="grid min-h-[calc(100dvh_-_3.5rem)] place-items-center">
+      <p className="text-sm text-muted-foreground">Opening cockpit…</p>
     </main>
   );
 }
@@ -134,14 +169,26 @@ function Header({ streamStatus }: { streamStatus: string }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const params = useParams({ strict: false });
   const active = useRun(params.runId ?? "");
+  const waitingCount = useRuns().filter((run) => run.status === "waiting_human" || run.status === "human_control").length;
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-1 border-b border-border bg-card/90 px-4 backdrop-blur-xl">
+      {/* Attention rides one pixel of chrome: visible in peripheral vision on
+          any screen while a run is paused for a human. Static by motion budget. */}
+      {waitingCount > 0 && <div aria-hidden className="absolute inset-x-0 top-0 h-0.5 bg-warning" />}
       <button className="flex shrink-0 items-center gap-2 pr-2 text-sm font-semibold text-foreground" onClick={() => navigate({ to: "/" })}>
         <span className="grid size-7 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm"><Command size={15} /></span>
         <span>Z-Apply</span>
       </button>
       <nav className="flex min-w-0 items-center gap-0.5" aria-label="Primary navigation">
-        <NavButton active={pathname === "/"} label="New" icon={<Plus size={14} />} onClick={() => navigate({ to: "/" })} />
+        <button
+          className="ml-1 flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-border bg-card px-2 text-[12.5px] font-medium text-foreground transition-colors hover:border-primary/40 hover:text-primary"
+          onClick={() => navigate({ to: "/new" })}
+          title="New application (N)"
+        >
+          <Plus size={13} />
+          <span className="hidden sm:inline">New</span>
+          <kbd className="hidden rounded border border-border bg-muted px-1 font-mono text-[10px] leading-4 text-muted-foreground md:inline">N</kbd>
+        </button>
         <NavButton active={pathname.startsWith("/history") || pathname.startsWith("/runs")} label="Runs" icon={<History size={14} />} onClick={() => navigate({ to: "/history" })} />
         <NavButton active={pathname.startsWith("/artifacts")} label="Artifacts" icon={<Archive size={14} />} onClick={() => navigate({ to: "/artifacts" })} />
         <NavButton active={pathname.startsWith("/diagnostics")} label="Health" icon={<Gauge size={14} />} onClick={() => navigate({ to: "/diagnostics" })} />
@@ -230,7 +277,7 @@ export function RunWorkspace() {
   if (detail.isLoading) return <CenteredMessage>Loading application workspace…</CenteredMessage>;
   if (detail.isError) return <CenteredMessage>Run unavailable: {detail.error.message}</CenteredMessage>;
   if (!selected) return null;
-  return <Cockpit run={selected} runs={runs} onNew={() => navigate({ to: "/" })} onSelect={(run) => navigate({ to: "/runs/$runId", params: { runId: run.id } })} />;
+  return <Cockpit run={selected} runs={runs} onNew={() => navigate({ to: "/new" })} onSelect={(run) => navigate({ to: "/runs/$runId", params: { runId: run.id } })} />;
 }
 
 export function HistoryWorkspace() {
