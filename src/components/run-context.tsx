@@ -1,4 +1,4 @@
-import { Ban, BriefcaseBusiness, CheckCircle2, ExternalLink, PanelRight, ReceiptText, Sparkles, Timer, XCircle } from "lucide-react";
+import { Ban, BriefcaseBusiness, Check, CheckCircle2, Copy, ExternalLink, PanelRight, ReceiptText, Sparkles, Timer, XCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api } from "../api";
@@ -33,7 +33,10 @@ export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCan
             <p className="mt-1 truncate text-[13px] text-muted-foreground">{run.role || "Role details loading"}</p>
           </div>
         </div>
-        <a className="mt-3 flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-violet-700 dark:hover:text-violet-300" href={run.job_url} target="_blank" rel="noreferrer"><ExternalLink size={13} /> Source job</a>
+        <div className="mt-3 flex items-center gap-2">
+          <a className="flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-violet-700 dark:hover:text-violet-300" href={run.job_url} target="_blank" rel="noreferrer"><ExternalLink size={13} /> Source job</a>
+          <CopyJobUrl url={run.job_url} />
+        </div>
       </div>
 
       <div className="rounded-xl border border-border bg-card p-3.5">
@@ -72,6 +75,33 @@ export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCan
       {run.status !== "terminal" && <button className="mt-auto flex items-center justify-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-[13px] text-rose-700 hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300" onClick={onCancel}><Ban size={14} /> Cancel run</button>}
       {callsOpen && <CallsDrawer runId={run.id} onClose={() => setCallsOpen(false)} />}
     </aside>
+  );
+}
+
+function CopyJobUrl({ url }: { url: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // Clipboard API needs a focused document and a secure context; the dev
+      // server over plain http:// qualifies via localhost, but older fallback
+      // paths are not worth the code here — surface failure as a no-op.
+      return;
+    }
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button
+      type="button"
+      title={copied ? "Copied" : "Copy job URL"}
+      aria-label={copied ? "Copied job URL" : "Copy job URL"}
+      onClick={copy}
+      className="text-muted-foreground transition-colors hover:text-violet-700 dark:hover:text-violet-300"
+    >
+      {copied ? <Check size={13} className="text-emerald-600 dark:text-emerald-400" /> : <Copy size={13} />}
+    </button>
   );
 }
 

@@ -1,7 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import { applyEvent, parseStreamEvent } from "./hooks";
-import { hrefFor, parseRoute } from "./routes";
 import { humanRequestSchema, liveViewSchema } from "./schemas";
 import { runAttentionLabel } from "./lib/format";
 import type { ActivityEvent } from "./types";
@@ -20,13 +19,6 @@ function event(databaseId: number, sequence = databaseId): ActivityEvent {
 }
 
 describe("frontend transport contracts", () => {
-  it("round-trips durable run URLs", () => {
-    const route = parseRoute("/runs/6d62d46a-3e48-4ac4-a77c-361591a4ef18");
-    expect(route).toEqual({ name: "run", runId: "6d62d46a-3e48-4ac4-a77c-361591a4ef18" });
-    expect(hrefFor(route)).toBe("/runs/6d62d46a-3e48-4ac4-a77c-361591a4ef18");
-    expect(parseRoute("/artifacts")).toEqual({ name: "artifacts" });
-  });
-
   it("rejects malformed SSE payloads instead of poisoning the cache", () => {
     const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     expect(parseStreamEvent("not-json")).toBeUndefined();

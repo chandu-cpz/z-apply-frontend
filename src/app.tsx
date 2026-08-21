@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Outlet, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import { Group, Panel, Separator, useDefaultLayout, usePanelRef } from "react-resizable-panels";
 import { Archive, Bot, BriefcaseBusiness, Command, Gauge, History, Monitor, Moon, PanelLeftClose, PanelRightClose, Plus, Settings, Sun } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -15,16 +16,16 @@ import { RunContext } from "./components/run-context";
 import { RunRail } from "./components/run-tabs";
 import { StartRun } from "./components/start-run";
 import { useEventStream, useLiveEventStream } from "./hooks";
-import { type Route, useRoute } from "./routes";
 import { ArtifactsScreen } from "./screens/artifacts-screen";
-import { DiagnosticsScreen } from "./screens/diagnostics-screen";
 import { HistoryScreen } from "./screens/history-screen";
-import { SettingsScreen } from "./screens/settings-screen";
 import type { Run } from "./types";
 import { useUiStore } from "./ui-store";
 
-export function App() {
-  const [route, navigate] = useRoute();
+/* ------------------------------------------------------------------ */
+/* Shell (root route): theme, header, SSE bootstrap, attention toasts  */
+/* ------------------------------------------------------------------ */
+
+export function AppShell() {
   const theme = useUiStore((state) => state.theme);
   const streamStatus = useEventStream();
   useLiveEventStream();
@@ -34,38 +35,9 @@ export function App() {
   useEffect(() => {
     if (runsQuery.data) useSyncStore.getState().seedRuns(runsQuery.data);
   }, [runsQuery.data]);
-  const notifiedRuns = useRef(new Set<string>());
-  const routeRunId = route.name === "run" ? route.runId : "";
-  const detail = useQuery({
-    queryKey: ["run", routeRunId],
-    queryFn: () => api.run(routeRunId),
-    enabled: Boolean(routeRunId),
-    staleTime: Infinity,
-  });
-  useEffect(() => {
-    if (detail.data) useSyncStore.getState().seedRun(detail.data);
-  }, [detail.data]);
-  const selected = useRun(routeRunId);
-  const create = useMutation({
-    mutationFn: ({
-      url,
-      task,
-      provider,
-      model,
-    }: {
-      url: string;
-      task: string;
-      provider?: string;
-      model?: string;
-    }) => api.createRun(url, task, provider, model),
-    onSuccess: (run) => {
-      useSyncStore.getState().seedRun(run);
-      navigate({ name: "run", runId: run.id });
-      toast.success("Application queued", { description: "Core now owns the run and will stream verified activity." });
-    },
-    onError: (error) => toast.error("Unable to start application", { description: error.message }),
-  });
 
+  const navigate = useNavigate();
+  const notifiedRuns = useRef(new Set<string>());
   useEffect(() => {
     // Every run waiting on a human gets a persistent sonner toast (bottom-
     // right, rich warning) that survives until the run resolves or is
@@ -92,40 +64,55 @@ export function App() {
         duration: Infinity,
         action: {
           label: "Answer in chat",
-          onClick: () => navigate({ name: "run", runId: run.id }),
+          onClick: () => navigate({ to: "/runs/$runId", params: { runId: run.id } }),
         },
       });
     }
   }, [navigate, runs]);
 
   return <div className={`${theme === "dark" ? "dark" : ""} min-h-screen bg-stone-100 font-sans text-stone-950 antialiased dark:bg-zinc-950 dark:text-zinc-100`}>
-    <Header active={selected} route={route} streamStatus={streamStatus} navigate={navigate}/>
-    {route.name === "new" && <StartRun onSubmit={(url, task, provider, model) => create.mutate({ url, task, provider, model })}/>}
-    {route.name === "history" && <HistoryScreen runs={runs} onOpen={(run) => navigate({ name: "run", runId: run.id })}/>}
-    {route.name === "artifacts" && <ArtifactsScreen runs={runs}/>}
-    {route.name === "settings" && <SettingsScreen/>}
-    {route.name === "diagnostics" && <DiagnosticsScreen/>}
-    {route.name === "run" && selected && <Cockpit run={selected} runs={runs} onNew={() => navigate({ name: "new" })} onSelect={(run) => navigate({ name: "run", runId: run.id })}/>}
-    {route.name === "run" && detail.isLoading && <CenteredMessage>Loading application workspace…</CenteredMessage>}
-    {route.name === "run" && detail.isError && <CenteredMessage>Run unavailable: {detail.error.message}</CenteredMessage>}
+    <Header streamStatus={streamStatus} />
+    <Outlet />
   </div>;
 }
 
-function Header({ active, route, streamStatus, navigate }: { active?: Run; route: Route; streamStatus: string; navigate(route: Route): void }) {
+export function NotFound() {
+  const navigate = useNavigate();
+  return (
+    <main className="grid min-h-[calc(100dvh_-_3.75rem)] place-items-center p-8 text-center">
+      <div>
+        <p className="text-sm text-stone-500">This page does not exist.</p>
+        <button className="mt-3 rounded-lg border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground shadow-sm hover:border-violet-300 hover:text-violet-700 dark:hover:border-violet-800 dark:hover:text-violet-300" onClick={() => navigate({ to: "/" })}>
+          Start a new application
+        </button>
+      </div>
+    </main>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Header                                                              */
+/* ------------------------------------------------------------------ */
+
+function Header({ streamStatus }: { streamStatus: string }) {
   const theme = useUiStore((state) => state.theme);
   const toggleTheme = useUiStore((state) => state.toggleTheme);
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const params = useParams({ strict: false });
+  const active = useRun(params.runId ?? "");
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-1 border-b border-zinc-200 bg-white/90 px-4 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/90">
-      <button className="flex shrink-0 items-center gap-2 pr-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100" onClick={() => navigate({ name: "new" })}>
+      <button className="flex shrink-0 items-center gap-2 pr-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100" onClick={() => navigate({ to: "/" })}>
         <span className="grid size-7 place-items-center rounded-lg bg-violet-600 text-white shadow-sm shadow-violet-950/30"><Command size={15} /></span>
         <span>Z-Apply</span>
       </button>
       <nav className="flex min-w-0 items-center gap-0.5" aria-label="Primary navigation">
-        <NavButton active={route.name === "new"} label="New" icon={<Plus size={14} />} onClick={() => navigate({ name: "new" })} />
-        <NavButton active={route.name === "history" || route.name === "run"} label="Runs" icon={<History size={14} />} onClick={() => navigate({ name: "history" })} />
-        <NavButton active={route.name === "artifacts"} label="Artifacts" icon={<Archive size={14} />} onClick={() => navigate({ name: "artifacts" })} />
-        <NavButton active={route.name === "diagnostics"} label="Health" icon={<Gauge size={14} />} onClick={() => navigate({ name: "diagnostics" })} />
-        <NavButton active={route.name === "settings"} label="Settings" icon={<Settings size={14} />} onClick={() => navigate({ name: "settings" })} />
+        <NavButton active={pathname === "/"} label="New" icon={<Plus size={14} />} onClick={() => navigate({ to: "/" })} />
+        <NavButton active={pathname.startsWith("/history") || pathname.startsWith("/runs")} label="Runs" icon={<History size={14} />} onClick={() => navigate({ to: "/history" })} />
+        <NavButton active={pathname.startsWith("/artifacts")} label="Artifacts" icon={<Archive size={14} />} onClick={() => navigate({ to: "/artifacts" })} />
+        <NavButton active={pathname.startsWith("/diagnostics")} label="Health" icon={<Gauge size={14} />} onClick={() => navigate({ to: "/diagnostics" })} />
+        <NavButton active={pathname.startsWith("/settings")} label="Settings" icon={<Settings size={14} />} onClick={() => navigate({ to: "/settings" })} />
       </nav>
       <div className="ml-auto flex min-w-0 items-center gap-2.5">
         {active && <ActiveRunChip run={active} />}
@@ -164,6 +151,68 @@ function NavButton({ active, label, icon, onClick }: { active: boolean; label: s
     </button>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* Route screens                                                       */
+/* ------------------------------------------------------------------ */
+
+export function NewApplicationScreen() {
+  const navigate = useNavigate();
+  const create = useMutation({
+    mutationFn: ({
+      url,
+      task,
+      provider,
+      model,
+    }: {
+      url: string;
+      task: string;
+      provider?: string;
+      model?: string;
+    }) => api.createRun(url, task, provider, model),
+    onSuccess: (run) => {
+      useSyncStore.getState().seedRun(run);
+      navigate({ to: "/runs/$runId", params: { runId: run.id } });
+      toast.success("Application queued", { description: "Core now owns the run and will stream verified activity." });
+    },
+    onError: (error) => toast.error("Unable to start application", { description: error.message }),
+  });
+
+  return <StartRun onSubmit={(url, task, provider, model) => create.mutate({ url, task, provider, model })} />;
+}
+
+export function RunWorkspace() {
+  const { runId } = useParams({ from: "/runs/$runId" });
+  const navigate = useNavigate();  const detail = useQuery({
+    queryKey: ["run", runId],
+    queryFn: () => api.run(runId),
+    staleTime: Infinity,
+  });
+  useEffect(() => {
+    if (detail.data) useSyncStore.getState().seedRun(detail.data);
+  }, [detail.data]);
+  const selected = useRun(runId);
+  const runs = useRuns();
+  if (detail.isLoading) return <CenteredMessage>Loading application workspace…</CenteredMessage>;
+  if (detail.isError) return <CenteredMessage>Run unavailable: {detail.error.message}</CenteredMessage>;
+  if (!selected) return null;
+  return <Cockpit run={selected} runs={runs} onNew={() => navigate({ to: "/" })} onSelect={(run) => navigate({ to: "/runs/$runId", params: { runId: run.id } })} />;
+}
+
+export function HistoryWorkspace() {
+  const runs = useRuns();
+  const navigate = useNavigate();
+  return <HistoryScreen runs={runs} onOpen={(run) => navigate({ to: "/runs/$runId", params: { runId: run.id } })} />;
+}
+
+export function ArtifactsWorkspace() {
+  const runs = useRuns();
+  return <ArtifactsScreen runs={runs} />;
+}
+
+/* ------------------------------------------------------------------ */
+/* Run cockpit                                                         */
+/* ------------------------------------------------------------------ */
 
 interface CockpitProps { run: Run; runs: Run[]; onNew(): void; onSelect(run: Run): void; }
 

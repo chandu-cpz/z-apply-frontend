@@ -32,6 +32,7 @@ function useNamedEventSource(
   types: readonly string[],
   receive: (msg: MessageEvent<string>) => void,
   onOpen?: () => void,
+  onReset?: (msg: MessageEvent<string>) => void,
 ): StreamStatus {
   const [status, setStatus] = useState<StreamStatus>("connecting");
   // Latest-ref pattern: callers pass inline closures, so `receive` changes
@@ -39,9 +40,11 @@ function useNamedEventSource(
   // every parent render would tear down and reopen the EventSource.
   const receiveRef = useRef(receive);
   const openRef = useRef(onOpen);
+  const resetRef = useRef(onReset);
   useEffect(() => {
     receiveRef.current = receive;
     openRef.current = onOpen;
+    resetRef.current = onReset;
   });
   useEffect(() => {
     const source = new EventSource(url);
@@ -55,7 +58,7 @@ function useNamedEventSource(
     for (const type of types) {
       source.addEventListener(type, dispatch);
     }
-    return () => source.close();
+    source.addEventListener("cursor.reset", (msg) => resetRef.current?.(msg as MessageEvent<string>));    return () => source.close();
   }, [url, types]);
   return status;
 }
@@ -114,6 +117,14 @@ export function useEventStream(): StreamStatus {
       void client.invalidateQueries({ queryKey: ["live"] });
       void client.invalidateQueries({ queryKey: ["calls"] });
       void client.invalidateQueries({ queryKey: ["run-artifacts"] });
+    },
+    () => {
+      // The stored cursor outlived the database (reset/restore): the server
+      // wiped its replay cursor and is resending history from id 0. Drop the
+      // local cursor and the store watermark so the replay patches state
+      // instead of being discarded as "already applied".
+      localStorage.removeItem(CURSOR_KEY);
+      useSyncStore.setState({ lastAppliedId: 0 });
     },
   );
 }
