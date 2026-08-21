@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { ChevronRight, Sparkles } from "lucide-react";
@@ -44,7 +44,14 @@ function ThinkingStrip({
   streaming?: boolean;
   durationMs?: number;
 }) {
-  const [open, setOpen] = useState(true);
+  // Live thinking stays open so you watch it reason; the moment the turn
+  // finishes, the body collapses to its one-line summary. Expanding is a
+  // deliberate act, never the default — otherwise every turn opens as a
+  // wall of gray text.
+  const [open, setOpen] = useState(Boolean(streaming));
+  useEffect(() => {
+    if (!streaming) setOpen(false);
+  }, [streaming]);
   if (!reasoning && !streaming) return null;
   const caption = streaming
     ? "Thinking…"
@@ -79,7 +86,7 @@ function ThinkingStrip({
             transition={{ duration: 0.15, ease: "easeOut" }}
             className="overflow-hidden"
           >
-            <div className="mt-1 ml-1.5 max-h-80 overflow-auto rounded-lg bg-muted/40 px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap text-muted-foreground">
+            <div className="mt-1 ml-1.5 max-h-72 overflow-auto border-l-2 border-border py-0.5 pl-3.5 text-[13px] leading-relaxed whitespace-pre-wrap text-muted-foreground">
               {reasoning}
               {streaming && <span className="animate-pulse text-primary">▍</span>}
             </div>

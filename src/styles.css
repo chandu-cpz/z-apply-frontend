@@ -79,25 +79,26 @@
 }
 
 :root {
-  /* Light: cool off-white shell, cards float a half-step above it. */
-  --background: oklch(0.977 0.002 285);
+  /* Light: the shell sits a real step below cards so surfaces float visibly
+   * on hard white panels; borders are firm enough to survive projector gamma. */
+  --background: oklch(0.962 0.003 285);
   --foreground: oklch(0.182 0.006 285);
-  --card: oklch(0.995 0.001 285);
+  --card: oklch(0.997 0.001 285);
   --card-foreground: oklch(0.182 0.006 285);
   --popover: oklch(0.995 0.001 285);
   --popover-foreground: oklch(0.182 0.006 285);
   /* Iris: white text passes AA at L 0.53 (~5.4:1). */
   --primary: oklch(0.53 0.19 285);
   --primary-foreground: oklch(0.995 0.001 285);
-  --secondary: oklch(0.947 0.003 285);
+  --secondary: oklch(0.938 0.004 285);
   --secondary-foreground: oklch(0.24 0.008 285);
-  --muted: oklch(0.947 0.003 285);
-  --muted-foreground: oklch(0.475 0.012 285);
-  --accent: oklch(0.935 0.012 285);
+  --muted: oklch(0.93 0.004 285);
+  --muted-foreground: oklch(0.452 0.013 285);
+  --accent: oklch(0.925 0.014 285);
   --accent-foreground: oklch(0.32 0.06 285);
   --destructive: oklch(0.53 0.2 27);
-  --border: oklch(0.9 0.004 285);
-  --input: oklch(0.87 0.005 285);
+  --border: oklch(0.885 0.005 285);
+  --input: oklch(0.86 0.006 285);
   --ring: oklch(0.53 0.19 285 / 45%);
   --chart-1: oklch(0.53 0.19 285);
   --chart-2: oklch(0.63 0.17 155);
@@ -105,7 +106,7 @@
   --chart-4: oklch(0.58 0.2 25);
   --chart-5: oklch(0.42 0.02 285);
   --radius: 0.625rem;
-  --sidebar: oklch(0.957 0.003 285);
+  --sidebar: oklch(0.944 0.004 285);
   --sidebar-foreground: oklch(0.24 0.008 285);
   --sidebar-primary: oklch(0.53 0.19 285);
   --sidebar-primary-foreground: oklch(0.995 0.001 285);

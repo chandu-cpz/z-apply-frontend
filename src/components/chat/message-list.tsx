@@ -187,6 +187,10 @@ export function MessageList({ runId, events, run, onAnswer, onDecide }: { runId:
     anchorTo: "end",
     followOnAppend: true,
     scrollEndThreshold: FOLLOW_THRESHOLD_PX,
+    // Virtualizer's default flushSync fires inside React lifecycles while the
+    // thread streams (console error spam + render jank); async re-render is
+    // imperceptible here.
+    useFlushSync: false,
   });
 
   const onScroll = () => {

@@ -14,10 +14,10 @@ export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCan
   const failed = meta.state === "failed";
   const [callsOpen, setCallsOpen] = useState(false);
   return (
-    <aside className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto border-r border-border bg-sidebar p-3">
+    <aside className="flex min-h-0 flex-1 flex-col overflow-y-auto border-r border-border bg-sidebar">
       {submitted && <SubmissionSuccess run={run} />}
       {failed && (
-        <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3.5 shadow-sm">
+        <div className="mx-3 mt-3 rounded-xl border border-destructive/30 bg-destructive/10 p-3.5">
           <div className="flex items-center gap-2">
             <XCircle className="text-destructive" size={18} />
             <span className="text-sm font-semibold text-destructive">Run ended {run.outcome ?? "unsuccessfully"}</span>
@@ -25,56 +25,67 @@ export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCan
           {run.summary && <p className="mt-2 text-[13px] leading-relaxed text-destructive/80">{run.summary}</p>}
         </div>
       )}
-      <div className="rounded-xl border border-border bg-card p-3.5">
+
+      {/* Identity: one flowing header block, no box. */}
+      <div className="px-4 pb-4 pt-4">
         <div className="flex items-start gap-3">
-          <span className="grid size-9 place-items-center rounded-lg bg-primary/10 text-primary"><BriefcaseBusiness size={18} /></span>
+          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"><BriefcaseBusiness size={18} /></span>
           <div className="min-w-0">
             <h2 className="truncate text-sm font-semibold text-foreground">{run.company || hostnameOf(run.job_url)}</h2>
-            <p className="mt-1 truncate text-[13px] text-muted-foreground">{run.role || "Role details loading"}</p>
+            <p className="mt-0.5 truncate text-[13px] text-muted-foreground">{run.role || "Role details loading"}</p>
+            <div className="mt-1.5 flex items-center gap-2.5">
+              <a className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary" href={run.job_url} target="_blank" rel="noreferrer"><ExternalLink size={12} /> Source</a>
+              <CopyJobUrl url={run.job_url} />
+            </div>
           </div>
-        </div>
-        <div className="mt-3 flex items-center gap-2">
-          <a className="flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-primary" href={run.job_url} target="_blank" rel="noreferrer"><ExternalLink size={13} /> Source job</a>
-          <CopyJobUrl url={run.job_url} />
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-3.5">
-        <p className="text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground">Run objective</p>
-        <p className="mt-2 text-[13px] leading-relaxed text-foreground/90">
-          {run.task || "Complete the application carefully, verify it, and request approval before submission."}
-        </p>
-      </div>
+      <SectionLabel>Objective</SectionLabel>
+      <p className="px-4 pb-4 text-[13px] leading-relaxed text-foreground/90">
+        {run.task || "Complete the application carefully, verify it, and request approval before submission."}
+      </p>
 
       <RunStats runId={run.id} active={run.status !== "terminal"} />
 
-      <div className="px-1">
-        <p className="text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground">Current activity</p>
-        <div className="mt-2 flex items-center gap-2 text-sm text-foreground"><Sparkles className="text-primary" size={15} /><span className="truncate capitalize">{run.current_agent || "Orchestrator"}</span></div>
-        <p className="mt-1 pl-6 text-[13px] capitalize text-muted-foreground">{run.phase.replaceAll("_", " ")}</p>
+      <SectionLabel>Now</SectionLabel>
+      <div className="px-4 pb-4">
+        <div className="flex items-center gap-2 text-sm font-medium text-foreground"><Sparkles className="text-primary" size={14} /><span className="truncate capitalize">{run.current_agent || "Orchestrator"}</span></div>
+        <p className="mt-0.5 pl-[22px] text-xs capitalize text-muted-foreground">{run.phase.replaceAll("_", " ")}</p>
+      </div>
+
+      <div className="mt-auto flex gap-2 border-t border-sidebar-border px-3 py-3">
         <button
           type="button"
           onClick={onOpenSubagents}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground shadow-sm hover:border-primary/40 hover:text-primary"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
         >
-          <PanelRight size={14} />
+          <PanelRight size={13} />
           Subagents
         </button>
         <button
           type="button"
           onClick={() => setCallsOpen(true)}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground shadow-sm hover:border-primary/40 hover:text-primary"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
         >
-          <ReceiptText size={14} />
+          <ReceiptText size={13} />
           LLM calls
         </button>
       </div>
 
-      {run.summary && <p className="max-h-28 overflow-hidden border-l-2 border-border pl-3 text-[13px] leading-relaxed text-muted-foreground" title={run.summary}>{run.summary}</p>}
+      {run.summary && <p className="max-h-28 overflow-hidden border-l-2 border-border px-3 pb-3 text-[13px] leading-relaxed text-muted-foreground" title={run.summary}>{run.summary}</p>}
 
-      {run.status !== "terminal" && <button className="mt-auto flex items-center justify-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-[13px] text-destructive hover:bg-destructive/20" onClick={onCancel}><Ban size={14} /> Cancel run</button>}
+      {run.status !== "terminal" && <div className="border-t border-sidebar-border p-3"><button className="flex w-full items-center justify-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-[13px] text-destructive hover:bg-destructive/20" onClick={onCancel}><Ban size={14} /> Cancel run</button></div>}
       {callsOpen && <CallsDrawer runId={run.id} onClose={() => setCallsOpen(false)} />}
     </aside>
+  );
+}
+
+/** Sidebar section label: quiet micro type with a hairline above, replacing
+ * the old boxed cards — sections read by whitespace and label, not borders. */
+function SectionLabel({ children }: React.PropsWithChildren) {
+  return (
+    <p className="border-t border-sidebar-border px-4 pb-1.5 pt-3 text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted-foreground/80">{children}</p>
   );
 }
 
@@ -193,21 +204,20 @@ function RunStats({ runId, active }: { runId: string; active: boolean }) {
   const calls = data?.calls ?? [];
   if (!totals || totals.calls === 0) return null;
   const cacheRate = totals.input_tokens > 0 ? totals.cache_read_tokens / totals.input_tokens : 0;
-  const cell = "rounded-lg border border-border bg-card px-2 py-1.5";
-  const value = "block font-mono text-[12.5px] leading-5 tabular-nums font-semibold text-foreground";
-  const label = "block text-[10px] text-muted-foreground";
+  const value = "block font-mono text-[13px] leading-5 tabular-nums font-semibold text-foreground";
+  const label = "block text-[10.5px] text-muted-foreground";
   return (
-    <div className="rounded-xl border border-border bg-card p-3">
-      <p className="text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground">Run stats</p>
-      <div className="mt-2 grid grid-cols-3 gap-1.5">
-        <div className={cell}><span className={value}>{totals.calls}</span><span className={label}>calls</span></div>
-        <div className={cell}><span className={value}>{fmtCompact(totals.new_input_tokens)}</span><span className={label}>in tokens</span></div>
-        <div className={cell}><span className={value}>{fmtCompact(totals.output_tokens)}</span><span className={label}>out</span></div>
-        <div className={cell}><span className={value}>{cacheRate > 0 ? `${(cacheRate * 100).toFixed(0)}%` : "—"}</span><span className={label}>cache</span></div>
-        <div className={cell}><span className={value}>${totals.cost_usd.toFixed(3)}</span><span className={label}>cost</span></div>
-        <div className={cell}><span className={value}>{calls[0] ? calls[0].model.split("-")[0] : "—"}</span><span className={label}>model</span></div>
+    <>
+      <SectionLabel>Tokens & cost</SectionLabel>
+      <div className="grid grid-cols-3 gap-x-2 gap-y-3 px-4 pb-4">
+        <div><span className={value}>{totals.calls}</span><span className={label}>calls</span></div>
+        <div><span className={value}>{fmtCompact(totals.new_input_tokens)}</span><span className={label}>in tok</span></div>
+        <div><span className={value}>{fmtCompact(totals.output_tokens)}</span><span className={label}>out tok</span></div>
+        <div><span className={value}>{cacheRate > 0 ? `${(cacheRate * 100).toFixed(0)}%` : "—"}</span><span className={label}>cache</span></div>
+        <div><span className={value}>${totals.cost_usd.toFixed(2)}</span><span className={label}>cost</span></div>
+        <div><span className={value}>{calls[0] ? calls[0].model.split("-")[0] : "—"}</span><span className={label}>model</span></div>
       </div>
-    </div>
+    </>
   );
 }
 
