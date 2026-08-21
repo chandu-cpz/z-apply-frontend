@@ -30,11 +30,11 @@ function AppIdentity({ run }: { run: Run }) {
   const subtitle = run.role || (run.company ? hostnameOf(run.job_url) : "");
   return (
     <>
-      <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100" title={run.job_url}>
+      <p className="truncate text-sm font-semibold text-foreground" title={run.job_url}>
         {title}
       </p>
       {subtitle && (
-        <p className="mt-0.5 truncate text-xs text-zinc-400 dark:text-zinc-500" title={run.role ? run.role : run.job_url}>
+        <p className="mt-0.5 truncate text-xs text-muted-foreground" title={run.role ? run.role : run.job_url}>
           {subtitle}
         </p>
       )}
@@ -46,7 +46,7 @@ function RunRowCard({ run, onOpen }: { run: Run; onOpen(run: Run): void }) {
   const chip = statusChip(run);
   return (
     <button
-      className="w-full rounded-xl border border-zinc-200 bg-white p-4 text-left transition hover:border-violet-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-violet-800"
+      className="w-full rounded-xl border border-border bg-card p-4 text-left transition hover:border-primary/40"
       onClick={(event) => handleRowClick(run, event, onOpen)}
       title={run.job_url}
     >
@@ -54,7 +54,7 @@ function RunRowCard({ run, onOpen }: { run: Run; onOpen(run: Run): void }) {
         <div className="min-w-0">
           <AppIdentity run={run} />
         </div>
-        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
           <ArrowUpRight size={15} />
         </span>
       </div>
@@ -63,8 +63,8 @@ function RunRowCard({ run, onOpen }: { run: Run; onOpen(run: Run): void }) {
           <span className={cn("size-1.5 rounded-full", chip.dot)} />
           {chip.label}
         </span>
-        <span className="text-[11px] text-zinc-400 dark:text-zinc-500">{run.phase.replaceAll("_", " ")}</span>
-        <span className="ml-auto text-[11px] tabular-nums text-zinc-400 dark:text-zinc-500">{formatDate(run.started_at || run.created_at)}</span>
+        <span className="text-[11px] text-muted-foreground">{run.phase.replaceAll("_", " ")}</span>
+        <span className="ml-auto text-[11px] tabular-nums text-muted-foreground">{formatDate(run.started_at || run.created_at)}</span>
       </div>
     </button>
   );
@@ -79,9 +79,9 @@ export function HistoryScreen({ runs, onOpen }: { runs: Run[]; onOpen(run: Run):
         ))}
         {runs.length === 0 && <EmptyState />}
       </div>
-      <div className="hidden overflow-hidden rounded-xl border border-zinc-200 bg-white md:block dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="hidden overflow-hidden rounded-xl border border-border bg-card md:block">
         <table className="w-full table-fixed text-left text-[13px]">
-          <thead className="bg-zinc-50/80 text-[11px] text-zinc-400 dark:bg-zinc-950/40 dark:text-zinc-500">
+          <thead className="bg-muted/40 text-[11px] uppercase tracking-[0.05em] text-muted-foreground">
             <tr>
               <th className="w-[30%] px-4 py-3 font-medium">Application</th>
               <th className="w-[14%] px-4 py-3 font-medium">Status</th>
@@ -96,27 +96,27 @@ export function HistoryScreen({ runs, onOpen }: { runs: Run[]; onOpen(run: Run):
               const chip = statusChip(run);
               return (
                 <tr
-                  className="group cursor-pointer border-t border-zinc-100 transition-colors hover:bg-violet-50/40 dark:border-zinc-800 dark:hover:bg-violet-950/20"
+                  className="group cursor-pointer border-t border-border transition-colors hover:bg-muted/40"
                   key={run.id}
                   onClick={(event) => handleRowClick(run, event, onOpen)}
                   title={run.job_url}
                 >
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2">
                     <AppIdentity run={run} />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2">
                     <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium", chip.cls)}>
                       <span className={cn("size-1.5 rounded-full", chip.dot)} />
                       {chip.label}
                     </span>
                   </td>
-                  <td className="px-4 py-3 capitalize text-zinc-600 dark:text-zinc-300">{run.phase.replaceAll("_", " ")}</td>
-                  <td className="px-4 py-3 capitalize text-zinc-600 dark:text-zinc-300">{run.outcome?.replaceAll("_", " ") || "—"}</td>
-                  <td className="px-4 py-3 text-zinc-500 dark:text-zinc-400">{formatDate(run.started_at || run.created_at)}</td>
+                  <td className="px-4 py-2 capitalize text-muted-foreground">{run.phase.replaceAll("_", " ")}</td>
+                  <td className="px-4 py-2 capitalize text-muted-foreground">{run.outcome?.replaceAll("_", " ") || "—"}</td>
+                  <td className="px-4 py-2 text-muted-foreground">{formatDate(run.started_at || run.created_at)}</td>
                   <td>
                     <button
                       type="button"
-                      className="grid size-8 place-items-center rounded-lg text-zinc-400 opacity-0 transition group-hover:opacity-100 hover:bg-zinc-100 hover:text-zinc-600 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                      className="grid size-8 place-items-center rounded-lg text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:bg-muted hover:text-foreground"
                       title={`Open job posting (${hostnameOf(run.job_url)})`}
                       onClick={(event) => {
                         event.stopPropagation();
@@ -140,8 +140,8 @@ export function HistoryScreen({ runs, onOpen }: { runs: Run[]; onOpen(run: Run):
 function EmptyState() {
   return (
     <div className="p-10 text-center">
-      <p className="text-sm text-zinc-400 dark:text-zinc-500">No applications have been recorded yet.</p>
-      <p className="mt-1 text-xs text-zinc-400/70 dark:text-zinc-600">Start one from the New screen and it will appear here.</p>
+      <p className="text-sm text-muted-foreground">No applications have been recorded yet.</p>
+      <p className="mt-1 text-xs text-muted-foreground/70">Start one from the New screen and it will appear here.</p>
     </div>
   );
 }

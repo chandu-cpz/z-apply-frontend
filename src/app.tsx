@@ -69,7 +69,7 @@ export function AppShell() {
     }
   }, [navigate, runs]);
 
-  return <div className="min-h-screen bg-stone-100 font-sans text-stone-950 antialiased dark:bg-zinc-950 dark:text-zinc-100">
+  return <div className="min-h-screen bg-background font-sans text-foreground antialiased">
     <Header streamStatus={streamStatus} />
     <Outlet />
   </div>;
@@ -80,8 +80,8 @@ export function NotFound() {
   return (
     <main className="grid min-h-[calc(100dvh_-_3.75rem)] place-items-center p-8 text-center">
       <div>
-        <p className="text-sm text-stone-500">This page does not exist.</p>
-        <button className="mt-3 rounded-lg border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground shadow-sm hover:border-violet-300 hover:text-violet-700 dark:hover:border-violet-800 dark:hover:text-violet-300" onClick={() => navigate({ to: "/" })}>
+        <p className="text-sm text-muted-foreground">This page does not exist.</p>
+        <button className="mt-3 rounded-lg border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground shadow-sm hover:border-primary/40 hover:text-primary" onClick={() => navigate({ to: "/" })}>
           Start a new application
         </button>
       </div>
@@ -100,9 +100,9 @@ function Header({ streamStatus }: { streamStatus: string }) {
   const params = useParams({ strict: false });
   const active = useRun(params.runId ?? "");
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-1 border-b border-zinc-200 bg-white/90 px-4 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/90">
-      <button className="flex shrink-0 items-center gap-2 pr-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100" onClick={() => navigate({ to: "/" })}>
-        <span className="grid size-7 place-items-center rounded-lg bg-violet-600 text-white shadow-sm shadow-violet-950/30"><Command size={15} /></span>
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-1 border-b border-border bg-card/90 px-4 backdrop-blur-xl">
+      <button className="flex shrink-0 items-center gap-2 pr-2 text-sm font-semibold text-foreground" onClick={() => navigate({ to: "/" })}>
+        <span className="grid size-7 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm"><Command size={15} /></span>
         <span>Z-Apply</span>
       </button>
       <nav className="flex min-w-0 items-center gap-0.5" aria-label="Primary navigation">
@@ -114,11 +114,11 @@ function Header({ streamStatus }: { streamStatus: string }) {
       </nav>
       <div className="ml-auto flex min-w-0 items-center gap-2.5">
         {active && <ActiveRunChip run={active} />}
-        <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400" title="Live event stream">
-          <span className={`size-1.5 rounded-full ${streamStatus === "connected" ? "bg-emerald-400" : "bg-amber-400"}`} />
+        <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground" title="Live event stream">
+          <span className={`size-1.5 rounded-full ${streamStatus === "connected" ? "bg-success" : "bg-warning"}`} />
           <span className="hidden sm:inline">{streamStatus}</span>
         </span>
-        <button className="grid size-8 shrink-0 place-items-center rounded-md text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")} title="Toggle color theme">
+        <button className="grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted" onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")} title="Toggle color theme">
           {resolvedTheme === "light" ? <Moon size={15} /> : <Sun size={15} />}
         </button>
       </div>
@@ -130,10 +130,10 @@ function Header({ streamStatus }: { streamStatus: string }) {
 function ActiveRunChip({ run }: { run: Run }) {
   const meta = getRunStatusMeta(run);
   return (
-    <span className="hidden max-w-64 min-w-0 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 lg:flex dark:border-zinc-800 dark:bg-zinc-900">
+    <span className="hidden max-w-64 min-w-0 items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 lg:flex">
       <span className={`size-1.5 shrink-0 rounded-full ${meta.dot}`} />
-      <span className="truncate text-[11.5px] font-medium text-zinc-700 dark:text-zinc-300">{run.company || hostnameOf(run.job_url)}</span>
-      <span className="shrink-0 text-[10.5px] text-zinc-400 dark:text-zinc-500">{meta.label}</span>
+      <span className="truncate text-[11.5px] font-medium text-foreground">{run.company || hostnameOf(run.job_url)}</span>
+      <span className="shrink-0 text-[10.5px] text-muted-foreground">{meta.label}</span>
     </span>
   );
 }
@@ -141,7 +141,7 @@ function ActiveRunChip({ run }: { run: Run }) {
 function NavButton({ active, label, icon, onClick }: { active: boolean; label: string; icon: React.ReactNode; onClick(): void }) {
   return (
     <button
-      className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12.5px] transition ${active ? "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200" : "text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"}`}
+      className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12.5px] transition ${active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-muted"}`}
       onClick={onClick}
     >
       {icon}
@@ -276,14 +276,14 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
   const conversation = <AgentConversation run={run} events={events.data ?? []} busy={action.isPending} onSendContext={sendContext} onStop={() => action.mutate(() => api.cancel(run.id), { onSuccess: () => toast.success("Run stopped") })} onAnswer={(requestId, answer) => action.mutate(() => api.answer(run.id, requestId, answer), { onSuccess: () => { refresh(); toast.success("Answer delivered to the agent"); } })} onDecide={(requestId, decision) => action.mutate(() => api.decide(run.id, requestId, decision), { onSuccess: () => { refresh(); toast.success(decision === "approve" ? "Submission approved" : "Submission rejected"); } })}/>;
   const subagents = subagentsOpen ? <AgentsDrawer runId={run.id} events={events.data ?? []} onClose={() => setSubagentsOpen(false)} /> : null;
 
-  if (!desktop) return <main className="grid h-[calc(100dvh_-_3.75rem)] min-h-0 grid-rows-[minmax(0,1fr)_3.5rem] overflow-hidden bg-stone-100 dark:bg-zinc-950"><div className="min-h-0 overflow-hidden">{mobilePanel === "activity" && conversation}{mobilePanel === "browser" && <aside className="relative flex h-full min-h-0 flex-col overflow-hidden p-2">{browser}</aside>}{mobilePanel === "run" && <div className="h-full overflow-hidden">{context}</div>}</div><nav className="grid grid-cols-3 border-t border-stone-200 bg-white p-1.5 dark:border-zinc-800 dark:bg-zinc-950" aria-label="Run workspace"><MobileTab active={mobilePanel === "activity"} label="Activity" icon={<Bot size={16}/>} onClick={() => setMobilePanel("activity")}/><MobileTab active={mobilePanel === "browser"} label="Browser" icon={<Monitor size={16}/>} onClick={() => setMobilePanel("browser")}/><MobileTab active={mobilePanel === "run"} label="Run" icon={<BriefcaseBusiness size={16}/>} onClick={() => setMobilePanel("run")}/></nav>{subagents}</main>;
+  if (!desktop) return <main className="grid h-[calc(100dvh_-_3.75rem)] min-h-0 grid-rows-[minmax(0,1fr)_3.5rem] overflow-hidden bg-background"><div className="min-h-0 overflow-hidden">{mobilePanel === "activity" && conversation}{mobilePanel === "browser" && <aside className="relative flex h-full min-h-0 flex-col overflow-hidden p-2">{browser}</aside>}{mobilePanel === "run" && <div className="h-full overflow-hidden">{context}</div>}</div><nav className="grid grid-cols-3 border-t border-border bg-card p-1.5" aria-label="Run workspace"><MobileTab active={mobilePanel === "activity"} label="Activity" icon={<Bot size={16}/>} onClick={() => setMobilePanel("activity")}/><MobileTab active={mobilePanel === "browser"} label="Browser" icon={<Monitor size={16}/>} onClick={() => setMobilePanel("browser")}/><MobileTab active={mobilePanel === "run"} label="Run" icon={<BriefcaseBusiness size={16}/>} onClick={() => setMobilePanel("run")}/></nav>{subagents}</main>;
 
   return <main className="h-[calc(100dvh_-_3.75rem)] min-h-0"><Group orientation="horizontal" className="h-full overflow-hidden" defaultLayout={layout.defaultLayout} onLayoutChanged={layout.onLayoutChanged}>
     <Panel id="context" panelRef={leftPanel} defaultSize={18} minSize={15} collapsible collapsedSize={0}><div className="flex h-full min-w-0 flex-col"><RunRail runs={runs} selected={run.id} onNew={onNew} onSelect={openRun} onCollapse={() => leftPanel.current?.collapse()}/>{context}</div></Panel>
     <ResizeHandle/>
     <Panel id="activity" defaultSize={34} minSize={25}>{conversation}</Panel>
     <ResizeHandle/>
-    <Panel id="workspace" panelRef={rightPanel} defaultSize={48} minSize={30} collapsible collapsedSize={0}><aside className="relative flex h-full min-w-0 flex-col overflow-hidden bg-stone-100 p-2 dark:bg-zinc-950">{browser}</aside></Panel>
+    <Panel id="workspace" panelRef={rightPanel} defaultSize={48} minSize={30} collapsible collapsedSize={0}><aside className="relative flex h-full min-w-0 flex-col overflow-hidden bg-background p-2">{browser}</aside></Panel>
   </Group>{!humanControl && <div className="fixed right-4 bottom-4 z-20 hidden gap-2 lg:flex"><PanelToggle label="Runs" onClick={() => leftPanel.current?.isCollapsed() ? leftPanel.current.expand() : leftPanel.current?.collapse()} icon={<PanelLeftClose size={15}/>}/><PanelToggle label="Browser" onClick={() => rightPanel.current?.isCollapsed() ? rightPanel.current.expand() : rightPanel.current?.collapse()} icon={<PanelRightClose size={15}/>}/></div>}{subagents}</main>;
 }
 
@@ -299,8 +299,8 @@ function usePageVisible(): boolean {
   }, []);
   return visible;
 }
-function MobileTab({ active, attention = false, label, icon, onClick }: { active: boolean; attention?: boolean; label: string; icon: React.ReactNode; onClick(): void }) { return <button className={`relative flex items-center justify-center gap-2 rounded-lg text-[11px] ${active ? "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200" : "text-stone-500 dark:text-zinc-500"}`} onClick={onClick}>{icon}{label}{attention && <span className="absolute top-1.5 right-[22%] size-2 rounded-full bg-amber-400"/>}</button>; }
+function MobileTab({ active, attention = false, label, icon, onClick }: { active: boolean; attention?: boolean; label: string; icon: React.ReactNode; onClick(): void }) { return <button className={`relative flex items-center justify-center gap-2 rounded-lg text-[11px] ${active ? "bg-accent text-accent-foreground" : "text-muted-foreground"}`} onClick={onClick}>{icon}{label}{attention && <span className="absolute top-1.5 right-[22%] size-2 rounded-full bg-warning"/>}</button>; }
 
-function ResizeHandle() { return <Separator className="group relative w-2 cursor-col-resize bg-stone-200 after:absolute after:inset-x-[3px] after:top-[40%] after:bottom-[40%] after:rounded after:bg-stone-400 hover:after:bg-violet-500 dark:bg-zinc-900"/>; }
-function PanelToggle({ label, icon, onClick }: { label: string; icon: React.ReactNode; onClick(): void }) { return <button className="flex items-center gap-1.5 rounded-md border border-stone-300 bg-white px-2.5 py-2 text-[11px] text-stone-600 shadow-lg hover:text-stone-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300" onClick={onClick}>{icon}{label}</button>; }
-function CenteredMessage({ children }: React.PropsWithChildren) { return <main className="grid min-h-[calc(100dvh_-_3.75rem)] place-items-center p-8 text-sm text-stone-500">{children}</main>; }
+function ResizeHandle() { return <Separator className="group relative w-2 cursor-col-resize bg-muted after:absolute after:inset-x-[3px] after:top-[40%] after:bottom-[40%] after:rounded after:bg-muted-foreground/50 hover:after:bg-primary/60"/>; }
+function PanelToggle({ label, icon, onClick }: { label: string; icon: React.ReactNode; onClick(): void }) { return <button className="flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-2 text-[11px] text-muted-foreground shadow-lg hover:text-foreground" onClick={onClick}>{icon}{label}</button>; }
+function CenteredMessage({ children }: React.PropsWithChildren) { return <main className="grid min-h-[calc(100dvh_-_3.75rem)] place-items-center p-8 text-sm text-muted-foreground">{children}</main>; }

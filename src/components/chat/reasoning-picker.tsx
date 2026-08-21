@@ -69,31 +69,29 @@ export function ReasoningPicker({
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen((prev) => !prev)}
-        className="inline-flex items-center gap-1.5 rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1 text-[11px] font-medium text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1 text-[11px] font-medium text-foreground transition hover:bg-muted focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
         title="Thinking / reasoning"
       >
-        <span className="text-zinc-400 dark:text-zinc-500">Thinking</span>
+        <span className="text-muted-foreground">Thinking</span>
         <span
-          className={`font-mono uppercase tracking-wider text-[10px] ${
+          className={`text-[10px] uppercase tracking-wide ${
             selectedReasoning === "on"
-              ? "text-violet-600 dark:text-violet-400"
-              : selectedReasoning === "off"
-                ? "text-zinc-400 dark:text-zinc-500"
-                : "text-zinc-500 dark:text-zinc-400"
+              ? "font-medium text-primary"
+              : "text-muted-foreground"
           }`}
         >
           {OPTION_LABEL[activeKey]}
         </span>
-        <span className="text-[9px] text-zinc-400">{isOpen ? "▴" : "▾"}</span>
+        <span className="text-[9px] text-muted-foreground">{isOpen ? "▴" : "▾"}</span>
       </button>
 
       {isOpen && (
         <div
           className={`absolute z-50 ${
             direction === "up" ? "bottom-full mb-2" : "top-full mt-2"
-          } left-0 w-44 rounded-xl border border-zinc-200 bg-white p-1.5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-950`}
+          } left-0 w-44 rounded-xl border border-border bg-popover p-1.5 shadow-2xl`}
         >
-          <div className="px-2 py-1 text-[10px] font-semibold tracking-wider text-zinc-400 uppercase dark:text-zinc-500">
+          <div className="px-2 py-1 text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground">
             Thinking
           </div>
           <div className="space-y-0.5">
@@ -110,12 +108,12 @@ export function ReasoningPicker({
                   }}
                   className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs transition ${
                     isCurrent
-                      ? "bg-violet-50 font-medium text-violet-950 dark:bg-violet-950/40 dark:text-violet-200"
-                      : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
+                      ? "bg-primary/10 font-medium text-primary"
+                      : "text-foreground hover:bg-muted"
                   }`}
                 >
                   {OPTION_LABEL[key]}
-                  {isCurrent && <span className="text-[10px] text-violet-500">•</span>}
+                  {isCurrent && <span className="text-[10px] text-primary">•</span>}
                 </button>
               );
             })}

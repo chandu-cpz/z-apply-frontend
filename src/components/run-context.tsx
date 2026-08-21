@@ -14,33 +14,33 @@ export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCan
   const failed = meta.state === "failed";
   const [callsOpen, setCallsOpen] = useState(false);
   return (
-    <aside className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto border-r border-border bg-muted/40 p-3 dark:bg-zinc-950">
+    <aside className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto border-r border-border bg-sidebar p-3">
       {submitted && <SubmissionSuccess run={run} />}
       {failed && (
-        <div className="rounded-xl border border-rose-300/60 bg-rose-50 p-3.5 shadow-sm dark:border-rose-900/60 dark:bg-rose-950/40">
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3.5 shadow-sm">
           <div className="flex items-center gap-2">
-            <XCircle className="text-rose-600 dark:text-rose-300" size={18} />
-            <span className="text-sm font-semibold text-rose-800 dark:text-rose-200">Run ended {run.outcome ?? "unsuccessfully"}</span>
+            <XCircle className="text-destructive" size={18} />
+            <span className="text-sm font-semibold text-destructive">Run ended {run.outcome ?? "unsuccessfully"}</span>
           </div>
-          {run.summary && <p className="mt-2 text-[13px] leading-relaxed text-rose-900/80 dark:text-rose-100/80">{run.summary}</p>}
+          {run.summary && <p className="mt-2 text-[13px] leading-relaxed text-destructive/80">{run.summary}</p>}
         </div>
       )}
       <div className="rounded-xl border border-border bg-card p-3.5">
         <div className="flex items-start gap-3">
-          <span className="grid size-9 place-items-center rounded-lg bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-200"><BriefcaseBusiness size={18} /></span>
+          <span className="grid size-9 place-items-center rounded-lg bg-primary/10 text-primary"><BriefcaseBusiness size={18} /></span>
           <div className="min-w-0">
             <h2 className="truncate text-sm font-semibold text-foreground">{run.company || hostnameOf(run.job_url)}</h2>
             <p className="mt-1 truncate text-[13px] text-muted-foreground">{run.role || "Role details loading"}</p>
           </div>
         </div>
         <div className="mt-3 flex items-center gap-2">
-          <a className="flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-violet-700 dark:hover:text-violet-300" href={run.job_url} target="_blank" rel="noreferrer"><ExternalLink size={13} /> Source job</a>
+          <a className="flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-primary" href={run.job_url} target="_blank" rel="noreferrer"><ExternalLink size={13} /> Source job</a>
           <CopyJobUrl url={run.job_url} />
         </div>
       </div>
 
       <div className="rounded-xl border border-border bg-card p-3.5">
-        <p className="text-[11px] font-medium text-muted-foreground">Run objective</p>
+        <p className="text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground">Run objective</p>
         <p className="mt-2 text-[13px] leading-relaxed text-foreground/90">
           {run.task || "Complete the application carefully, verify it, and request approval before submission."}
         </p>
@@ -49,13 +49,13 @@ export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCan
       <RunStats runId={run.id} active={run.status !== "terminal"} />
 
       <div className="px-1">
-        <p className="text-[11px] font-medium text-muted-foreground">Current activity</p>
-        <div className="mt-2 flex items-center gap-2 text-sm text-foreground"><Sparkles className="text-violet-500" size={15} /><span className="truncate capitalize">{run.current_agent || "Orchestrator"}</span></div>
+        <p className="text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground">Current activity</p>
+        <div className="mt-2 flex items-center gap-2 text-sm text-foreground"><Sparkles className="text-primary" size={15} /><span className="truncate capitalize">{run.current_agent || "Orchestrator"}</span></div>
         <p className="mt-1 pl-6 text-[13px] capitalize text-muted-foreground">{run.phase.replaceAll("_", " ")}</p>
         <button
           type="button"
           onClick={onOpenSubagents}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground shadow-sm hover:border-violet-300 hover:text-violet-700 dark:hover:border-violet-800 dark:hover:text-violet-300"
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground shadow-sm hover:border-primary/40 hover:text-primary"
         >
           <PanelRight size={14} />
           Subagents
@@ -63,7 +63,7 @@ export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCan
         <button
           type="button"
           onClick={() => setCallsOpen(true)}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground shadow-sm hover:border-violet-300 hover:text-violet-700 dark:hover:border-violet-800 dark:hover:text-violet-300"
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground shadow-sm hover:border-primary/40 hover:text-primary"
         >
           <ReceiptText size={14} />
           LLM calls
@@ -72,7 +72,7 @@ export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCan
 
       {run.summary && <p className="max-h-28 overflow-hidden border-l-2 border-border pl-3 text-[13px] leading-relaxed text-muted-foreground" title={run.summary}>{run.summary}</p>}
 
-      {run.status !== "terminal" && <button className="mt-auto flex items-center justify-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-[13px] text-rose-700 hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300" onClick={onCancel}><Ban size={14} /> Cancel run</button>}
+      {run.status !== "terminal" && <button className="mt-auto flex items-center justify-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-[13px] text-destructive hover:bg-destructive/20" onClick={onCancel}><Ban size={14} /> Cancel run</button>}
       {callsOpen && <CallsDrawer runId={run.id} onClose={() => setCallsOpen(false)} />}
     </aside>
   );
@@ -98,9 +98,9 @@ function CopyJobUrl({ url }: { url: string }) {
       title={copied ? "Copied" : "Copy job URL"}
       aria-label={copied ? "Copied job URL" : "Copy job URL"}
       onClick={copy}
-      className="text-muted-foreground transition-colors hover:text-violet-700 dark:hover:text-violet-300"
+      className="text-muted-foreground transition-colors hover:text-primary"
     >
-      {copied ? <Check size={13} className="text-emerald-600 dark:text-emerald-400" /> : <Copy size={13} />}
+      {copied ? <Check size={13} className="text-success" /> : <Copy size={13} />}
     </button>
   );
 }
@@ -121,14 +121,14 @@ function SubmissionSuccess({ run }: { run: Run }) {
   const confirmation = byKind(artifacts, "submission_confirmation");
   const review = byKind(artifacts, "review_screenshot");
   return (
-    <div className="overflow-hidden rounded-xl border border-emerald-300/60 bg-emerald-50 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/40">
+    <div className="overflow-hidden rounded-xl border border-success/30 bg-success/10 shadow-sm">
       <div className="flex items-center gap-2 px-3.5 pt-3 pb-2">
-        <CheckCircle2 className="text-emerald-600 dark:text-emerald-300" size={18} />
-        <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Application submitted</span>
-        <span className="ml-auto rounded-full bg-emerald-200/70 px-2 py-0.5 font-mono text-[10px] text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200">✓ verified</span>
+        <CheckCircle2 className="text-success" size={18} />
+        <span className="text-sm font-semibold text-success">Application submitted</span>
+        <span className="ml-auto rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-semibold text-success">✓ verified</span>
       </div>
       {durationLabel(run) && (
-        <p className="flex items-center gap-1.5 px-3.5 pb-2 font-mono text-[11px] text-emerald-700 dark:text-emerald-300">
+        <p className="flex items-center gap-1.5 px-3.5 pb-2 font-mono text-[11px] text-success">
           <Timer size={12} /> took {durationLabel(run)}
         </p>
       )}
@@ -137,7 +137,7 @@ function SubmissionSuccess({ run }: { run: Run }) {
           href={`/api/v1/artifacts/${confirmation.artifact_id}`}
           target="_blank"
           rel="noreferrer"
-          className="block border-y border-emerald-200/70 bg-white p-2 dark:border-emerald-900/60 dark:bg-zinc-950"
+          className="block border-y border-success/20 bg-card p-2"
         >
           <img
             src={`/api/v1/artifacts/${confirmation.artifact_id}`}
@@ -147,11 +147,11 @@ function SubmissionSuccess({ run }: { run: Run }) {
         </a>
       )}
       {run.summary && (
-        <p className="px-3.5 pt-2 pb-3 text-[13px] leading-relaxed text-emerald-900/80 dark:text-emerald-100/80">{run.summary}</p>
+        <p className="px-3.5 pt-2 pb-3 text-[13px] leading-relaxed text-success/80">{run.summary}</p>
       )}
       {review && (
-        <details className="border-t border-emerald-200/70 px-3.5 py-2 dark:border-emerald-900/60">
-          <summary className="cursor-pointer text-[11px] font-medium text-emerald-700 dark:text-emerald-300">Pre-submit review screenshot</summary>
+        <details className="border-t border-success/20 px-3.5 py-2">
+          <summary className="cursor-pointer text-[11px] font-medium text-success">Pre-submit review screenshot</summary>
           <a href={`/api/v1/artifacts/${review.artifact_id}`} target="_blank" rel="noreferrer" className="mt-2 block">
             <img
               src={`/api/v1/artifacts/${review.artifact_id}`}
@@ -198,7 +198,7 @@ function RunStats({ runId, active }: { runId: string; active: boolean }) {
   const label = "block text-[10px] text-muted-foreground";
   return (
     <div className="rounded-xl border border-border bg-card p-3">
-      <p className="text-[11px] font-medium text-muted-foreground">Run stats</p>
+      <p className="text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground">Run stats</p>
       <div className="mt-2 grid grid-cols-3 gap-1.5">
         <div className={cell}><span className={value}>{totals.calls}</span><span className={label}>calls</span></div>
         <div className={cell}><span className={value}>{fmtCompact(totals.new_input_tokens)}</span><span className={label}>in tokens</span></div>

@@ -13,8 +13,8 @@ export function AgentAvatar({ streaming = false }: { streaming?: boolean }) {
       className={cn(
         "grid size-7 shrink-0 place-items-center rounded-lg",
         streaming
-          ? "bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white"
-          : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800/80 dark:text-zinc-500",
+          ? "bg-primary/90 text-primary-foreground"
+          : "bg-muted text-muted-foreground",
       )}
     >
       <Sparkles size={13} />
@@ -32,7 +32,7 @@ function LiveMeta({ agent }: { agent: LiveAgent }) {
   if (metrics.tokPerSecond > 0) parts.push(`${metrics.tokPerSecond.toFixed(0)} tok/s`);
   if (metrics.outputTokens > 0) parts.push(`~${fmtNum(metrics.outputTokens)} tok`);
   if (parts.length === 0) return null;
-  return <span className="hidden text-[11px] tabular-nums text-zinc-400 sm:inline dark:text-zinc-500">{parts.join(" · ")}</span>;
+  return <span className="hidden text-[11px] tabular-nums text-muted-foreground sm:inline">{parts.join(" · ")}</span>;
 }
 
 function ThinkingStrip({
@@ -56,17 +56,17 @@ function ThinkingStrip({
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-left hover:bg-zinc-100/70 dark:hover:bg-zinc-800/50"
+        className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-left hover:bg-muted"
         aria-expanded={open}
       >
         {streaming ? (
-          <span className="size-2.5 shrink-0 animate-pulse rounded-full border-[1.5px] border-violet-400 border-t-transparent" />
+          <span className="size-2.5 shrink-0 animate-pulse rounded-full border-[1.5px] border-primary border-t-transparent" />
         ) : (
-          <ChevronRight size={12} className={cn("shrink-0 text-zinc-300 transition-transform dark:text-zinc-500", open && "rotate-90")} />
+          <ChevronRight size={12} className={cn("shrink-0 text-muted-foreground/70 transition-transform", open && "rotate-90")} />
         )}
-        <span className="text-[12px] text-zinc-500 dark:text-zinc-400">{caption}</span>
+        <span className="text-[12px] text-muted-foreground">{caption}</span>
         {!streaming && reasoning && (
-          <span className="hidden max-w-64 truncate text-[11px] text-zinc-400 sm:inline dark:text-zinc-500">{reasoning}</span>
+          <span className="hidden max-w-64 truncate text-[11px] text-muted-foreground sm:inline">{reasoning}</span>
         )}
       </button>
       <AnimatePresence initial={false}>
@@ -79,9 +79,9 @@ function ThinkingStrip({
             transition={{ duration: 0.15, ease: "easeOut" }}
             className="overflow-hidden"
           >
-            <div className="mt-1 ml-1.5 max-h-80 overflow-auto rounded-lg bg-zinc-50/90 px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap text-zinc-500 dark:bg-zinc-900/60 dark:text-zinc-400">
+            <div className="mt-1 ml-1.5 max-h-80 overflow-auto rounded-lg bg-muted/40 px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap text-muted-foreground">
               {reasoning}
-              {streaming && <span className="animate-pulse text-violet-500">▍</span>}
+              {streaming && <span className="animate-pulse text-primary">▍</span>}
             </div>
           </motion.div>
         )}
@@ -91,14 +91,14 @@ function ThinkingStrip({
 }
 
 const markdownClass = [
-  "text-[15px] leading-relaxed text-zinc-800 dark:text-zinc-200",
+  "text-[15px] leading-relaxed text-foreground",
   "[&_p]:my-2.5 [&_li]:my-1",
   "[&_h1]:mt-5 [&_h1]:mb-2 [&_h1]:text-xl [&_h1]:font-semibold",
   "[&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold",
   "[&_h3]:mt-4 [&_h3]:mb-1.5 [&_h3]:text-base [&_h3]:font-semibold",
-  "[&_a]:text-violet-600 [&_a]:underline dark:[&_a]:text-violet-300",
-  "[&_pre]:my-2.5 [&_pre]:overflow-auto [&_pre]:rounded-xl [&_pre]:bg-zinc-950 [&_pre]:p-3.5 [&_pre]:font-mono [&_pre]:text-[13px] [&_pre]:leading-relaxed [&_pre]:text-zinc-100",
-  "[&_code]:rounded [&_code]:bg-zinc-100 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[13px] [&_code]:text-zinc-800 dark:[&_code]:bg-zinc-800 dark:[&_code]:text-zinc-100",
+  "[&_a]:text-primary [&_a]:underline",
+  "[&_pre]:my-2.5 [&_pre]:overflow-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-border [&_pre]:bg-muted/40 [&_pre]:p-3.5 [&_pre]:font-mono [&_pre]:text-[13px] [&_pre]:leading-relaxed [&_pre]:text-foreground",
+  "[&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[13px] [&_code]:text-foreground",
 ].join(" ");
 
 function AssistantText({ text, streaming }: { text: string; streaming: boolean }) {
@@ -108,7 +108,7 @@ function AssistantText({ text, streaming }: { text: string; streaming: boolean }
         <ReactMarkdown>{text}</ReactMarkdown>
       </div>
       {streaming && (
-        <span className="ml-0.5 inline-block h-[1.05em] w-[2.5px] translate-y-[2px] animate-z-blink rounded-[1px] bg-zinc-600 dark:bg-zinc-300" aria-hidden />
+        <span className="ml-0.5 inline-block h-[1.05em] w-[2.5px] translate-y-[2px] animate-z-blink rounded-[1px] bg-muted-foreground" aria-hidden />
       )}
     </div>
   );
@@ -124,16 +124,16 @@ function MessageHeader({ agent, model, streaming, occurredAt, seq, liveMeta }: {
 }) {
   return (
     <div className="mb-1 flex items-baseline gap-2 px-0.5">
-      <span className="text-[13.5px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{humanAgent(agent)}</span>
-      {model && <span className="truncate text-[11px] text-zinc-400 dark:text-zinc-500">{humanModel(model)}</span>}
+      <span className="text-[13.5px] font-semibold tracking-tight text-foreground">{humanAgent(agent)}</span>
+      {model && <span className="truncate text-[11px] text-muted-foreground">{humanModel(model)}</span>}
       {streaming && (
-        <span className="flex shrink-0 items-center gap-1 text-[11px] text-violet-500 dark:text-violet-300">
-          <span className="size-1 animate-pulse rounded-full bg-violet-500" />
+        <span className="flex shrink-0 items-center gap-1 text-[11px] text-primary">
+          <span className="size-1 animate-pulse rounded-full bg-primary" />
           streaming
         </span>
       )}
       {liveMeta}
-      <time className="ml-auto shrink-0 text-[11px] tabular-nums text-zinc-400 dark:text-zinc-500" title={seq !== undefined ? `event #${seq}` : undefined}>
+      <time className="ml-auto shrink-0 text-[11px] tabular-nums text-muted-foreground" title={seq !== undefined ? `event #${seq}` : undefined}>
         {fmtTime(occurredAt)}
       </time>
     </div>
@@ -211,8 +211,8 @@ export const LiveAssistant = memo(function LiveAssistant({ agent }: { agent: Liv
         <ThinkingStrip reasoning={agent.reasoning} streaming={streaming} durationMs={agent.metrics?.durationMs} />
         {agent.text && <AssistantText text={agent.text} streaming={streaming} />}
         {!agent.text && !agent.reasoning && tools.length === 0 && (
-          <p className="flex items-center gap-1.5 text-[13px] text-zinc-400 dark:text-zinc-500">
-            <span className="size-2.5 animate-pulse rounded-full border-[1.5px] border-violet-400 border-t-transparent" />
+          <p className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+            <span className="size-2.5 animate-pulse rounded-full border-[1.5px] border-primary border-t-transparent" />
             streaming…
           </p>
         )}

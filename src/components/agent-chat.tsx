@@ -25,10 +25,10 @@ export function AgentChatPanel({ segment, runIndex }: { segment: AgentSegmentIte
   }, [runs, segment.runs, showRunHeader, runIndex]);
 
   const statusTone = segment.status === "failed"
-    ? "bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300"
+    ? "bg-destructive/10 text-destructive"
     : segment.status === "completed"
-      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300"
-      : "bg-violet-100 text-violet-700 dark:bg-violet-950/70 dark:text-violet-300";
+      ? "bg-success/10 text-success"
+      : "bg-primary/10 text-primary";
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
@@ -43,12 +43,12 @@ export function AgentChatPanel({ segment, runIndex }: { segment: AgentSegmentIte
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="border-b border-zinc-200 bg-zinc-50/80 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/60">
+      <div className="border-b border-border bg-muted/40 px-4 py-3">
         <div className="flex items-center gap-2.5">
-          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-violet-100 text-violet-600 dark:bg-violet-950/70 dark:text-violet-300"><Bot size={15} /></span>
+          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary"><Bot size={15} /></span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{humanAgent(segment.agent)}</p>
-            <p className="truncate text-xs text-zinc-400 dark:text-zinc-500">
+            <p className="truncate text-sm font-semibold tracking-tight text-foreground">{humanAgent(segment.agent)}</p>
+            <p className="truncate text-xs text-muted-foreground">
               {turnCount !== null ? `${turnCount} turns · ${toolCount} tools` : `${shown} items`}
               {segment.parent ? ` · from ${humanAgent(segment.parent)}` : ""}
             </p>

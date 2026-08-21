@@ -25,51 +25,51 @@ export function CallsDrawer({ runId, onClose }: { runId: string; onClose(): void
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-black/30 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-label="LLM call ledger" onClick={onClose}>
       <aside
-        className="flex h-full w-full max-w-2xl flex-col border-l border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950"
+        className="flex h-full w-full max-w-2xl flex-col border-l border-border bg-card shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <header className="flex items-center gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
+        <header className="flex items-center gap-3 border-b border-border px-5 py-4">
           <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">LLM call ledger</h2>
-            <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
+            <h2 className="text-sm font-semibold text-foreground">LLM call ledger</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
               One row per successful model call · tokens, cache, TTFT, throughput, cost
             </p>
           </div>
           {totals && (
-            <div className="flex shrink-0 items-center gap-1.5 font-mono text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
-              <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex shrink-0 items-center gap-1.5 font-mono text-xs tabular-nums text-muted-foreground">
+              <span className="rounded-full border border-border bg-muted/40 px-2.5 py-1">
                 {totals.calls} calls
               </span>
               <span
-                className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 dark:border-zinc-800 dark:bg-zinc-900"
+                className="rounded-full border border-border bg-muted/40 px-2.5 py-1"
                 title={`${fmtNum(totals.input_tokens)} gross in · ${fmtNum(totals.cache_read_tokens)} cached`}
               >
                 {fmtNum(totals.new_input_tokens)}→{fmtNum(totals.output_tokens)}
               </span>
-              <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-violet-700 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300">
+              <span className="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-primary">
                 {usd(totals.cost_usd)}
               </span>
             </div>
           )}
-          <button type="button" onClick={onClose} className="grid size-8 shrink-0 place-items-center rounded-md text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800" title="Close">
+          <button type="button" onClick={onClose} className="grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" title="Close">
             <X size={16} />
           </button>
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {isLoading && calls.length === 0 ? (
-            <div className="grid h-full place-items-center gap-2 text-sm text-zinc-400 dark:text-zinc-500">
+            <div className="grid h-full place-items-center gap-2 text-sm text-muted-foreground">
               <LoaderCircle size={16} className="animate-spin" />
               Loading ledger…
             </div>
           ) : calls.length === 0 ? (
-            <div className="grid h-full place-items-center px-6 text-center text-sm text-zinc-400 dark:text-zinc-500">
+            <div className="grid h-full place-items-center px-6 text-center text-sm text-muted-foreground">
               No model calls recorded yet. Calls appear here the moment the first model responds.
             </div>
           ) : (
             <table className="w-full border-collapse font-mono text-xs tabular-nums">
-              <thead className="sticky top-0 bg-zinc-50/95 backdrop-blur dark:bg-zinc-900/95">
-                <tr className="text-left text-[10px] tracking-[.08em] text-zinc-400 uppercase dark:text-zinc-500">
+              <thead className="sticky top-0 bg-muted/95 backdrop-blur">
+                <tr className="text-left text-[10px] tracking-[.08em] text-muted-foreground uppercase">
                   <th className="px-4 py-2 font-medium">#</th>
                   <th className="px-2 py-2 font-medium">agent</th>
                   <th className="px-2 py-2 font-medium">model</th>
@@ -83,43 +83,43 @@ export function CallsDrawer({ runId, onClose }: { runId: string; onClose(): void
               </thead>
               <tbody>
                 {calls.map((call) => (
-                  <tr key={call.sequence} className="border-t border-zinc-100 dark:border-zinc-800/70 hover:bg-zinc-50 dark:hover:bg-zinc-900/50">
-                    <td className="px-4 py-2 text-zinc-400 dark:text-zinc-500">{call.sequence}</td>
-                    <td className="max-w-32 truncate px-2 py-2 text-zinc-700 dark:text-zinc-300" title={call.agent}>
+                  <tr key={call.sequence} className="border-t border-border hover:bg-muted/50">
+                    <td className="px-4 py-2 text-muted-foreground">{call.sequence}</td>
+                    <td className="max-w-32 truncate px-2 py-2 text-foreground" title={call.agent}>
                       {humanAgent(call.agent)}
                     </td>
-                    <td className="max-w-44 truncate px-2 py-2 text-zinc-600 dark:text-zinc-400" title={call.model}>
+                    <td className="max-w-44 truncate px-2 py-2 text-muted-foreground" title={call.model}>
                       {humanModel(call.model)}
                     </td>
-                    <td className="px-2 py-2 text-right text-zinc-600 dark:text-zinc-400">{fmtNum(call.input_tokens)}</td>
-                    <td className="px-2 py-2 text-right text-zinc-600 dark:text-zinc-400">{fmtNum(call.output_tokens)}</td>
-                    <td className="px-2 py-2 text-right text-zinc-500 dark:text-zinc-500" title={`${fmtNum(call.cache_read_tokens)} cached`}>
+                    <td className="px-2 py-2 text-right text-muted-foreground">{fmtNum(call.input_tokens)}</td>
+                    <td className="px-2 py-2 text-right text-muted-foreground">{fmtNum(call.output_tokens)}</td>
+                    <td className="px-2 py-2 text-right text-muted-foreground" title={`${fmtNum(call.cache_read_tokens)} cached`}>
                       {pct(call.cache_read_tokens, call.input_tokens)}
                     </td>
-                    <td className="px-2 py-2 text-right text-zinc-500 dark:text-zinc-500">{call.ttft_ms ? fmtDur(call.ttft_ms) : "—"}</td>
-                    <td className="px-2 py-2 text-right text-zinc-500 dark:text-zinc-500">
+                    <td className="px-2 py-2 text-right text-muted-foreground">{call.ttft_ms ? fmtDur(call.ttft_ms) : "—"}</td>
+                    <td className="px-2 py-2 text-right text-muted-foreground">
                       {call.tok_per_second ? `${call.tok_per_second.toFixed(0)}` : "—"}
                     </td>
-                    <td className="px-4 py-2 text-right text-violet-700 dark:text-violet-300">{usd(call.cost_usd)}</td>
+                    <td className="px-4 py-2 text-right text-primary">{usd(call.cost_usd)}</td>
                   </tr>
                 ))}
               </tbody>
               {totals && calls.length > 0 && (
                 <tfoot>
-                  <tr className="border-t-2 border-zinc-200 bg-zinc-50 font-semibold dark:border-zinc-700 dark:bg-zinc-900">
-                    <td className="px-4 py-2.5 text-zinc-500 dark:text-zinc-400">total</td>
-                    <td className="px-2 py-2.5 text-zinc-500 dark:text-zinc-400">{totals.calls} calls</td>
+                  <tr className="border-t-2 border-border bg-muted/60 font-semibold">
+                    <td className="px-4 py-2.5 text-muted-foreground">total</td>
+                    <td className="px-2 py-2.5 text-muted-foreground">{totals.calls} calls</td>
                     <td className="px-2 py-2.5" />
                     <td
-                      className="px-2 py-2.5 text-right text-zinc-800 dark:text-zinc-200"
+                      className="px-2 py-2.5 text-right text-foreground"
                       title={`${fmtNum(totals.input_tokens)} gross in`}
                     >
                       {fmtNum(totals.new_input_tokens)}
                     </td>
-                    <td className="px-2 py-2.5 text-right text-zinc-800 dark:text-zinc-200">{fmtNum(totals.output_tokens)}</td>
-                    <td className="px-2 py-2.5 text-right text-zinc-600 dark:text-zinc-300">{pct(totals.cache_read_tokens, totals.input_tokens)}</td>
+                    <td className="px-2 py-2.5 text-right text-foreground">{fmtNum(totals.output_tokens)}</td>
+                    <td className="px-2 py-2.5 text-right text-muted-foreground">{pct(totals.cache_read_tokens, totals.input_tokens)}</td>
                     <td className="px-2 py-2.5" colSpan={2} />
-                    <td className="px-4 py-2.5 text-right text-violet-800 dark:text-violet-200">{usd(totals.cost_usd)}</td>
+                    <td className="px-4 py-2.5 text-right text-primary">{usd(totals.cost_usd)}</td>
                   </tr>
                 </tfoot>
               )}

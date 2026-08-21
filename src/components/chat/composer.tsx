@@ -61,7 +61,7 @@ export function Composer({
 
   return (
     <div className="shrink-0 px-5 pb-5">
-      <div className="mx-auto w-full max-w-[760px] rounded-3xl border border-zinc-200 bg-white shadow-sm transition focus-within:border-zinc-300 focus-within:ring-4 focus-within:ring-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus-within:border-zinc-700 dark:focus-within:ring-zinc-900">
+      <div className="mx-auto w-full max-w-[760px] rounded-3xl border border-border bg-card shadow-sm transition focus-within:border-primary/40 focus-within:ring-4 focus-within:ring-primary/10">
         <Textarea
           ref={textareaRef}
           value={content}
@@ -79,10 +79,10 @@ export function Composer({
               stop();
             }
           }}
-          className="max-h-[172px] min-h-[44px] resize-none border-0 bg-transparent px-5 py-3.5 text-[15px] leading-relaxed shadow-none placeholder:text-zinc-400 focus-visible:ring-0 dark:placeholder:text-zinc-500"
+          className="max-h-[172px] min-h-[44px] resize-none border-0 bg-transparent px-5 py-3.5 text-[15px] leading-relaxed shadow-none placeholder:text-muted-foreground focus-visible:ring-0"
         />
         <div className="flex items-center justify-between gap-3 px-4 pb-3">
-          <div className="flex min-w-0 items-center gap-2 text-xs text-zinc-400 dark:text-zinc-500">
+          <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
             {onSwitchModel && (
               <ModelCascadingPicker
                 selectedProvider={selectedProvider}
@@ -104,7 +104,7 @@ export function Composer({
             )}
             {streaming ? (
               <>
-                <span className="size-1.5 shrink-0 animate-pulse rounded-full bg-violet-500" />
+                <span className="size-1.5 shrink-0 animate-pulse rounded-full bg-primary" />
                 <span className="truncate">{status || "Streaming"} · Esc to stop</span>
               </>
             ) : (

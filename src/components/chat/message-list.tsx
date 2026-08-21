@@ -35,16 +35,16 @@ function ActivityStrip({ activity }: { activity: ChatRow[] }) {
     }
     const list: Array<{ label: string; cls: string }> = [];
     if (authenticated) {
-      list.push({ label: "authenticated", cls: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300" });
+      list.push({ label: "authenticated", cls: "bg-success/10 text-success" });
     }
     if (interruptions > 0) {
-      list.push({ label: `${interruptions} interruption${interruptions > 1 ? "s" : ""}`, cls: "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300" });
+      list.push({ label: `${interruptions} interruption${interruptions > 1 ? "s" : ""}`, cls: "bg-warning/15 text-warning" });
     }
     if (checkpoints > 0) {
-      list.push({ label: `${checkpoints} checkpoint${checkpoints > 1 ? "s" : ""} answered`, cls: "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400" });
+      list.push({ label: `${checkpoints} checkpoint${checkpoints > 1 ? "s" : ""} answered`, cls: "bg-muted text-muted-foreground" });
     }
     if (notices > 0) {
-      list.push({ label: `${notices} warning${notices > 1 ? "s" : ""}`, cls: "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300" });
+      list.push({ label: `${notices} warning${notices > 1 ? "s" : ""}`, cls: "bg-warning/15 text-warning" });
     }
     return list;
   }, [activity]);
@@ -68,22 +68,22 @@ function RunHeader({ run }: { run: Run }) {
   const seconds = Math.max(0, Math.floor((ended.getTime() - started.getTime()) / 1000));
   const duration = seconds >= 60 ? `${Math.floor(seconds / 60)}m ${seconds % 60}s` : `${seconds}s`;
   return (
-    <div className="mb-6 border-b border-zinc-100 pb-5 dark:border-zinc-800/60">
+    <div className="mb-6 border-b border-border pb-5">
       <div className="flex items-center gap-2.5">
-        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-violet-100 text-violet-600 dark:bg-violet-950/60 dark:text-violet-300">
+        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
           <BriefcaseBusiness size={15} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">{run.company || hostnameOf(run.job_url)}</p>
-          <p className="truncate text-[11.5px] text-zinc-400 dark:text-zinc-500">{run.role || "Role details loading"}</p>
+          <p className="truncate text-sm font-semibold text-foreground">{run.company || hostnameOf(run.job_url)}</p>
+          <p className="truncate text-[11.5px] text-muted-foreground">{run.role || "Role details loading"}</p>
         </div>
         <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-medium", chip.cls)}>{chip.label}</span>
-        <span className="shrink-0 text-[11px] tabular-nums text-zinc-400 dark:text-zinc-500">
+        <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
           {run.finished_at ? duration : `${duration} · in progress`}
         </span>
       </div>
       {run.summary && (
-        <p className="mt-3 text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">{run.summary}</p>
+        <p className="mt-3 text-[12.5px] leading-relaxed text-muted-foreground">{run.summary}</p>
       )}
     </div>
   );
@@ -123,7 +123,7 @@ export function RowRenderer({ row, onAnswer, onDecide }: { row: ChatRow; onAnswe
 function EmptyState() {
   return (
     <div className="grid place-items-center px-6 py-24 text-center">
-      <p className="max-w-sm text-sm leading-relaxed text-zinc-400 dark:text-zinc-500">
+      <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
         Live reasoning, tool calls and agent activity will stream here.
       </p>
     </div>
@@ -200,7 +200,7 @@ export function MessageList({ runId, events, run, onAnswer, onDecide }: { runId:
         <button
           type="button"
           onClick={jumpToLatest}
-          className="absolute bottom-5 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-lg hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+          className="absolute bottom-5 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-lg hover:bg-muted"
         >
           <ArrowDown size={14} />
           Jump to latest
