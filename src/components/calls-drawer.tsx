@@ -36,7 +36,7 @@ export function CallsDrawer({ runId, onClose }: { runId: string; onClose(): void
             </p>
           </div>
           {totals && (
-            <div className="flex shrink-0 items-center gap-1.5 font-mono text-xs tabular-nums text-muted-foreground">
+            <div className="flex shrink-0 items-center gap-1.5 font-mono text-[12.5px] leading-5 tabular-nums text-muted-foreground">
               <span className="rounded-full border border-border bg-muted/40 px-2.5 py-1">
                 {totals.calls} calls
               </span>
@@ -67,7 +67,7 @@ export function CallsDrawer({ runId, onClose }: { runId: string; onClose(): void
               No model calls recorded yet. Calls appear here the moment the first model responds.
             </div>
           ) : (
-            <table className="w-full border-collapse font-mono text-xs tabular-nums">
+            <table className="w-full border-collapse text-[12.5px] leading-5 tabular-nums">
               <thead className="sticky top-0 bg-muted/95 backdrop-blur">
                 <tr className="text-left text-[10px] tracking-[.08em] text-muted-foreground uppercase">
                   <th className="px-4 py-2 font-medium">#</th>
@@ -81,7 +81,7 @@ export function CallsDrawer({ runId, onClose }: { runId: string; onClose(): void
                   <th className="px-4 py-2 text-right font-medium">cost</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="font-mono">
                 {calls.map((call) => (
                   <tr key={call.sequence} className="border-t border-border hover:bg-muted/50">
                     <td className="px-4 py-2 text-muted-foreground">{call.sequence}</td>
@@ -108,18 +108,18 @@ export function CallsDrawer({ runId, onClose }: { runId: string; onClose(): void
                 <tfoot>
                   <tr className="border-t-2 border-border bg-muted/60 font-semibold">
                     <td className="px-4 py-2.5 text-muted-foreground">total</td>
-                    <td className="px-2 py-2.5 text-muted-foreground">{totals.calls} calls</td>
+                    <td className="px-2 py-2.5 font-mono text-muted-foreground">{totals.calls} calls</td>
                     <td className="px-2 py-2.5" />
                     <td
-                      className="px-2 py-2.5 text-right text-foreground"
+                      className="px-2 py-2.5 font-mono text-right text-foreground"
                       title={`${fmtNum(totals.input_tokens)} gross in`}
                     >
                       {fmtNum(totals.new_input_tokens)}
                     </td>
-                    <td className="px-2 py-2.5 text-right text-foreground">{fmtNum(totals.output_tokens)}</td>
-                    <td className="px-2 py-2.5 text-right text-muted-foreground">{pct(totals.cache_read_tokens, totals.input_tokens)}</td>
+                    <td className="px-2 py-2.5 font-mono text-right text-foreground">{fmtNum(totals.output_tokens)}</td>
+                    <td className="px-2 py-2.5 font-mono text-right text-muted-foreground">{pct(totals.cache_read_tokens, totals.input_tokens)}</td>
                     <td className="px-2 py-2.5" colSpan={2} />
-                    <td className="px-4 py-2.5 text-right text-primary">{usd(totals.cost_usd)}</td>
+                    <td className="px-4 py-2.5 font-mono text-right text-primary">{usd(totals.cost_usd)}</td>
                   </tr>
                 </tfoot>
               )}

@@ -1,9 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
-import { Download, FileArchive, FileJson, FileText } from "lucide-react";
-import { useEffect, useState } from "react";
+import {
+  Check,
+  ChevronDown,
+  Download,
+  FileArchive,
+  FileJson,
+  FileText,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import { artifactUrl, isImageArtifact } from "../lib/artifacts";
 import { hostnameOf } from "../lib/format";
+import { getRunStatusMeta } from "../lib/run-status";
 import { PageShell } from "../components/page-shell";
 import { useArtifacts, useSyncStore } from "../sync-store";
 import { cn } from "../lib/utils";
@@ -14,6 +22,12 @@ import {
   DialogDescription,
   DialogTitle,
 } from "../components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
 
 export function ArtifactsScreen({ runs }: { runs: Run[] }) {
   const [runId, setRunId] = useState(runs[0]?.id ?? "");
@@ -44,23 +58,63 @@ export function ArtifactsScreen({ runs }: { runs: Run[] }) {
         ? current.filter((item) => item !== kind)
         : [...current, kind],
     );
+  const sortedRuns = useMemo(
+    () =>
+      [...runs].sort((a, b) => b.created_at.localeCompare(a.created_at)),
+    [runs],
+  );
+  const selectedRun = runs.find((run) => run.id === selectedRunId) ?? null;
+  const selectedMeta = selectedRun ? getRunStatusMeta(selectedRun) : null;
   return (
     <PageShell
-      eyebrow="EVIDENCE VAULT"
       title="Run artifacts"
       description="Screenshots, documents, and submission evidence exposed by Core for the selected application."
       action={
-        <select
-          className="max-w-xs rounded-lg border border-border bg-card px-3 py-2 text-xs text-foreground"
-          value={selectedRunId}
-          onChange={(event) => setRunId(event.target.value)}
-        >
-          {runs.map((run) => (
-            <option value={run.id} key={run.id}>
-              {run.company || hostnameOf(run.job_url)} · {run.role || run.phase}
-            </option>
-          ))}
-        </select>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="inline-flex max-w-xs items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+            title="Switch run"
+          >
+            <span className="truncate font-medium">
+              {selectedRun
+                ? hostnameOf(selectedRun.job_url)
+                : "Select run"}
+            </span>
+            {selectedMeta && (
+              <span
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                  selectedMeta.cls,
+                )}
+              >
+                <span className={cn("size-1.5 rounded-full", selectedMeta.dot)} />
+                {selectedMeta.label}
+              </span>
+            )}
+            <ChevronDown className="ml-auto size-3.5 shrink-0 text-muted-foreground" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="max-w-xs">
+            {sortedRuns.map((run) => {
+              const meta = getRunStatusMeta(run);
+              return (
+                <DropdownMenuItem
+                  key={run.id}
+                  onSelect={() => setRunId(run.id)}
+                  title={`${run.company || hostnameOf(run.job_url)} · ${run.role || run.phase}`}
+                >
+                  <span className={cn("size-2 shrink-0 rounded-full", meta.dot)} />
+                  <span className="truncate">
+                    {run.company || hostnameOf(run.job_url)}
+                    <span className="text-muted-foreground"> · {run.role || run.phase}</span>
+                  </span>
+                  {run.id === selectedRunId && (
+                    <Check className="ml-auto size-3.5 shrink-0 text-primary" />
+                  )}
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
       }
     >
       {kinds.length > 0 && (
@@ -106,9 +160,11 @@ export function ArtifactsScreen({ runs }: { runs: Run[] }) {
         </p>
       )}
       {!artifactsQuery.isLoading && artifacts.length === 0 && (
-        <p className="rounded-xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-          No artifacts have been published for this run.
-        </p>
+        <div className="flex min-h-[calc(100dvh-18rem)] items-center justify-center">
+          <p className="w-full rounded-xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+            No artifacts have been published for this run.
+          </p>
+        </div>
       )}
       <Dialog
         open={lightbox !== null}

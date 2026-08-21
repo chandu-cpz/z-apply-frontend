@@ -128,7 +128,7 @@ function SubmissionSuccess({ run }: { run: Run }) {
         <span className="ml-auto rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-semibold text-success">✓ verified</span>
       </div>
       {durationLabel(run) && (
-        <p className="flex items-center gap-1.5 px-3.5 pb-2 font-mono text-[11px] text-success">
+        <p className="flex items-center gap-1.5 px-3.5 pb-2 font-mono text-[12.5px] leading-5 tabular-nums text-success">
           <Timer size={12} /> took {durationLabel(run)}
         </p>
       )}
@@ -194,7 +194,7 @@ function RunStats({ runId, active }: { runId: string; active: boolean }) {
   if (!totals || totals.calls === 0) return null;
   const cacheRate = totals.input_tokens > 0 ? totals.cache_read_tokens / totals.input_tokens : 0;
   const cell = "rounded-lg border border-border bg-card px-2 py-1.5";
-  const value = "block font-mono text-[13px] font-semibold text-foreground";
+  const value = "block font-mono text-[12.5px] leading-5 tabular-nums font-semibold text-foreground";
   const label = "block text-[10px] text-muted-foreground";
   return (
     <div className="rounded-xl border border-border bg-card p-3">

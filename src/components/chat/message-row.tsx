@@ -79,7 +79,7 @@ export function RecoveryRow({ attempt, errorType, detail, stage }: { attempt: nu
         )}
       </div>
       {open && (
-        <pre className="mt-1 ml-6 max-h-64 overflow-auto rounded-lg bg-warning/10 px-3 py-2 font-mono text-[12px] leading-relaxed whitespace-pre-wrap text-warning">
+        <pre className="mt-1 ml-6 max-h-64 overflow-auto rounded-lg bg-warning/10 px-3 py-2 font-mono text-[12.5px] leading-5 tabular-nums whitespace-pre-wrap text-warning">
           {detail}
         </pre>
       )}
@@ -218,7 +218,7 @@ function ModelLine({ entry }: { entry: ModelEntry }) {
   const tone = unsettled ? "text-warning" : "text-muted-foreground";
   return (
     <div className="ml-5 flex items-baseline gap-2 py-0.5">
-      <span className={cn("truncate font-mono text-[11.5px]", tone)}>{entry.model}</span>
+      <span className={cn("truncate font-mono text-[12.5px] leading-5 tabular-nums", tone)}>{entry.model}</span>
       {entry.agent && entry.agent !== "orchestrator" && (
         <span className="truncate text-[11px] text-muted-foreground">{humanAgent(entry.agent)}</span>
       )}
@@ -409,7 +409,7 @@ export function SubmissionApprovalCard({
         )}
       </div>
       {showContext && item.context && (
-        <pre className="mt-2 max-h-56 overflow-auto rounded-lg bg-card/80 px-3 py-2 font-mono text-[11.5px] leading-relaxed whitespace-pre-wrap text-muted-foreground">
+        <pre className="mt-2 max-h-56 overflow-auto rounded-lg bg-card/80 px-3 py-2 font-mono text-[12.5px] leading-5 tabular-nums whitespace-pre-wrap text-muted-foreground">
           {item.context}
         </pre>
       )}

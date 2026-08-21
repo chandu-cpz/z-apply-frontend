@@ -101,7 +101,7 @@ export function ModelCascadingPicker({
               {providerLabel}
             </span>
             <span className="text-muted-foreground/50">/</span>
-            <span className="truncate font-mono text-xs text-foreground">
+            <span className="truncate font-mono text-[12.5px] leading-5 tabular-nums text-foreground">
               {activeModelName || "Select model"}
             </span>
           </div>
@@ -119,7 +119,7 @@ export function ModelCascadingPicker({
             {providerLabel}
           </span>
           <span className="text-muted-foreground/50">·</span>
-          <span className="max-w-[130px] truncate font-mono text-foreground">{modelShortLabel || "model"}</span>
+          <span className="max-w-[130px] truncate font-mono text-[12.5px] leading-5 tabular-nums text-foreground">{modelShortLabel || "model"}</span>
           <span className="text-[9px] text-muted-foreground">{isOpen ? "▴" : "▾"}</span>
         </button>
       ) : (
@@ -133,7 +133,7 @@ export function ModelCascadingPicker({
             {providerLabel}
           </span>
           <span className="text-muted-foreground/50">/</span>
-          <span className="max-w-[160px] truncate font-mono text-[11px] text-foreground">
+          <span className="max-w-[160px] truncate font-mono text-[12.5px] leading-5 tabular-nums text-foreground">
             {modelShortLabel || "Select model"}
           </span>
           <span className="text-[10px] text-muted-foreground">{isOpen ? "▴" : "▾"}</span>
@@ -232,7 +232,7 @@ export function ModelCascadingPicker({
                             : "text-foreground hover:bg-muted"
                         }`}
                       >
-                        <span className="truncate font-mono text-[11px]">{model}</span>
+                        <span className="truncate font-mono text-[12.5px] leading-5 tabular-nums">{model}</span>
                         {isDefault && (
                           <span className="ml-2 shrink-0 rounded border border-border bg-muted/40 px-1.5 py-0.5 text-[9px] text-muted-foreground">
                             default
@@ -254,7 +254,7 @@ export function ModelCascadingPicker({
                       value={customModelInput}
                       onChange={(e) => setCustomModelInput(e.target.value)}
                       placeholder="e.g. meta-llama/llama-3-8b"
-                      className="w-full rounded-lg border border-input bg-card px-2.5 py-1.5 font-mono text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-primary"
+                      className="w-full rounded-lg border border-input bg-card px-2.5 py-1.5 font-mono text-[12.5px] leading-5 tabular-nums text-foreground outline-none placeholder:text-muted-foreground focus:border-primary"
                     />
                     <button
                       type="submit"

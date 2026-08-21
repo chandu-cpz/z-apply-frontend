@@ -97,8 +97,8 @@ const markdownClass = [
   "[&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold",
   "[&_h3]:mt-4 [&_h3]:mb-1.5 [&_h3]:text-base [&_h3]:font-semibold",
   "[&_a]:text-primary [&_a]:underline",
-  "[&_pre]:my-2.5 [&_pre]:overflow-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-border [&_pre]:bg-muted/40 [&_pre]:p-3.5 [&_pre]:font-mono [&_pre]:text-[13px] [&_pre]:leading-relaxed [&_pre]:text-foreground",
-  "[&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[13px] [&_code]:text-foreground",
+  "[&_pre]:my-2.5 [&_pre]:overflow-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-border [&_pre]:bg-muted/40 [&_pre]:p-3.5 [&_pre]:font-mono [&_pre]:text-[12.5px] [&_pre]:leading-5 [&_pre]:tabular-nums [&_pre]:text-foreground",
+  "[&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[12.5px] [&_code]:tabular-nums [&_code]:text-foreground",
 ].join(" ");
 
 function AssistantText({ text, streaming }: { text: string; streaming: boolean }) {

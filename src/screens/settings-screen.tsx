@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, CircleOff } from "lucide-react";
 import { api } from "../api";
+import { Badge } from "../components/ui/badge";
 import { DataCard, PageShell } from "../components/page-shell";
 
 export function SettingsScreen() {
@@ -11,7 +12,6 @@ export function SettingsScreen() {
 
   return (
     <PageShell
-      eyebrow="LOCAL CONFIGURATION"
       title="Profile and settings"
       description="Read-only configuration reported by the backend. Runtime secrets and candidate data remain owned by Core."
     >
@@ -50,17 +50,13 @@ export function SettingsScreen() {
                   </span>
                   <div className="flex items-center gap-1">
                     {provider.is_default && (
-                      <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[9px] font-medium text-primary">
-                        active default
-                      </span>
+                      <Badge className="bg-primary/10 text-primary">active default</Badge>
                     )}
-                    <span
-                      className={`rounded px-1.5 py-0.5 font-mono text-[9px] font-medium ${
-                        provider.configured ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {provider.configured ? "configured" : "missing key"}
-                    </span>
+                    {provider.configured ? (
+                      <Badge className="bg-success/10 text-success">configured</Badge>
+                    ) : (
+                      <Badge variant="secondary">missing key</Badge>
+                    )}
                   </div>
                 </div>
 
@@ -69,7 +65,7 @@ export function SettingsScreen() {
                 </p>
               </div>
 
-              <div className="mt-3 border-t border-border pt-2 font-mono text-[10px] text-muted-foreground">
+              <div className="mt-3 border-t border-border pt-2 font-mono text-[12.5px] tabular-nums text-muted-foreground">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Default:</span>
                   <span className="truncate">{provider.default_model}</span>
@@ -158,13 +154,13 @@ function Capability({ label, enabled }: { label: string; enabled?: boolean }) {
     <DataCard
       label={label}
       value={
-        <span
-          className={`inline-flex items-center gap-2 text-base ${
-            enabled ? "text-success" : "text-muted-foreground"
+        <Badge
+          className={`h-auto gap-2 px-2 py-1 text-base ${
+            enabled ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground"
           }`}
         >
           {enabled ? <CheckCircle2 size={18} /> : <CircleOff size={18} />} {enabled ? "Enabled" : "Unavailable"}
-        </span>
+        </Badge>
       }
     />
   );

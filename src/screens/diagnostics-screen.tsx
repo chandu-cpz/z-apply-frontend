@@ -14,7 +14,6 @@ export function DiagnosticsScreen() {
 
   return (
     <PageShell
-      eyebrow="SYSTEM HEALTH"
       title="Diagnostics"
       description="Live backend and Core integration health. Values refresh every five seconds."
     >
@@ -29,10 +28,10 @@ export function DiagnosticsScreen() {
             <div className="rounded-xl border border-border bg-card p-4 sm:col-span-2 lg:col-span-2">
               <p className="text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground">Capacity</p>
               <div className="mt-3 flex items-center gap-3">
-                <span className="whitespace-nowrap text-sm font-medium text-foreground">
-                  Active runs {activeRuns ?? "—"} / {maxRuns ?? "—"}
+                <span className="whitespace-nowrap text-sm font-medium tabular-nums text-foreground">
+                  {activeRuns ?? "—"} / {maxRuns ?? "—"} active
                 </span>
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                <div className="h-2 flex-1 overflow-hidden rounded-full border border-border bg-muted">
                   <div
                     className="h-full rounded-full bg-primary transition-all"
                     style={{ width: `${capacityPct}%` }}

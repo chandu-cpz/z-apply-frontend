@@ -30,7 +30,7 @@ export function ToolMessage({ item }: { item: ToolItem }) {
         ) : (
           <CheckCircle2 size={13} className="shrink-0 text-success" />
         )}
-        <span className="truncate font-mono text-[12.5px] text-muted-foreground">
+        <span className="truncate font-mono text-[12.5px] leading-5 tabular-nums text-muted-foreground">
           {item.name.replaceAll("_", " ")}
         </span>
         {item.model && (
@@ -58,7 +58,7 @@ export function ToolMessage({ item }: { item: ToolItem }) {
           {item.args && (
             <div className="min-w-0">
               <p className="mb-1 pl-0.5 text-[11px] text-muted-foreground">{textOf(item.args, 60) === item.args ? "" : "Args"}</p>
-              <pre className="max-h-64 overflow-auto rounded-lg bg-muted/40 px-3 py-2 font-mono text-[12px] leading-relaxed whitespace-pre-wrap text-muted-foreground">
+              <pre className="max-h-64 overflow-auto rounded-lg bg-muted/40 px-3 py-2 font-mono text-[12.5px] leading-5 tabular-nums whitespace-pre-wrap text-muted-foreground">
                 {item.args}
               </pre>
             </div>
@@ -66,7 +66,7 @@ export function ToolMessage({ item }: { item: ToolItem }) {
           {(item.output || item.error) && (
             <pre
               className={cn(
-                "max-h-72 overflow-auto rounded-lg px-3 py-2 font-mono text-[12px] leading-relaxed whitespace-pre-wrap",
+                "max-h-72 overflow-auto rounded-lg px-3 py-2 font-mono text-[12.5px] leading-5 tabular-nums whitespace-pre-wrap",
                 failed
                   ? "bg-destructive/10 text-destructive"
                   : "bg-muted/40 text-muted-foreground",

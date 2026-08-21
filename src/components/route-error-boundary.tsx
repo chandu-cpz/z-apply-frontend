@@ -13,7 +13,7 @@ export function RouteErrorBoundary({ error }: ErrorComponentProps) {
           <AlertTriangle size={18} className="shrink-0 text-destructive" />
           <h1 className="text-sm font-semibold text-foreground">This screen failed to render</h1>
         </div>
-        <p className="mt-2 break-words font-mono text-[12px] leading-relaxed text-muted-foreground">{message}</p>
+        <p className="mt-2 break-words font-mono text-[12.5px] leading-5 tabular-nums text-muted-foreground">{message}</p>
         <div className="mt-4 flex gap-2">
           <button
             type="button"

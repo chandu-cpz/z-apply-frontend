@@ -138,7 +138,7 @@ export function AgentsDrawer({ runId, events, onClose }: { runId: string; events
         <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-3">
           <Bot size={15} className="text-primary" />
           <h2 className="text-sm font-semibold text-foreground">Agents</h2>
-          <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] tabular-nums text-muted-foreground">{liveAgents.length} live · {runs.length} sessions</span>
+          <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[12.5px] leading-5 tabular-nums text-muted-foreground">{liveAgents.length} live · {runs.length} sessions</span>
           <button type="button" onClick={onClose} aria-label="Close agents" className="ml-auto grid size-7 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground">
             <X size={15} />
           </button>
@@ -185,7 +185,7 @@ export function AgentsDrawer({ runId, events, onClose }: { runId: string; events
                     <span className="block truncate text-[13px] font-semibold text-foreground">{runLabel(row)}</span>
                     <span className="block truncate text-[11px] text-muted-foreground">{runSubtitle(row)}</span>
                   </span>
-                  <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-muted-foreground">{row.agent.runs[row.runIndex].items.length} items</span>
+                  <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[12.5px] leading-5 tabular-nums text-muted-foreground">{row.agent.runs[row.runIndex].items.length} items</span>
                 </AgentRowButton>
               );
             })}
