@@ -27,7 +27,7 @@ export const runSchema = z.object({
   created_at: z.string(),
   started_at: z.string().nullable(),
   finished_at: z.string().nullable(),
-  current_reasoning: z.enum(["auto", "off", "on"]).optional().default("auto"),
+  current_reasoning: z.enum(["auto", "off", "on"]).optional().default("on"),
   current_reasoning_effort: z
     .enum(["low", "medium", "high", "max"])
     .nullable()

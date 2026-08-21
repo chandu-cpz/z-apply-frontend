@@ -41,7 +41,7 @@ function runFromView(view: Record<string, unknown> | undefined): Run | undefined
     created_at: view.created_at,
     started_at: view.started_at ?? null,
     finished_at: view.finished_at ?? null,
-    current_reasoning: view.current_reasoning ?? "auto",
+    current_reasoning: view.current_reasoning ?? "on",
     current_reasoning_effort: view.current_reasoning_effort ?? null,
   });
   return parsed.success ? parsed.data : undefined;

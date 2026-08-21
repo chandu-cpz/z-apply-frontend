@@ -41,7 +41,7 @@ function optionKey(option: ReasoningSelection): string {
 }
 
 export function ReasoningPicker({
-  selectedReasoning = "auto",
+  selectedReasoning = "on",
   selectedEffort = null,
   onSelect,
   disabled = false,
