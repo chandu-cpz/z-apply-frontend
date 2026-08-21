@@ -3,6 +3,7 @@ import { ArrowRight, BriefcaseBusiness, Link } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { motion, useReducedMotion } from "framer-motion";
 import { Button } from "./ui/button";
 import { ModelCascadingPicker } from "./model-cascading-picker";
 
@@ -16,6 +17,15 @@ interface Props {
   onSubmit(url: string, task: string, provider?: string, model?: string): void;
 }
 
+const HEADLINE_LINES = [
+  "Send a capable",
+  "agent into",
+  "the application.",
+];
+
+/** Loose client-side check purely for the visual top-edge cue; zod still validates on submit. */
+const LOOKS_LIKE_URL = /^https?:\/\/\S+\.\S+/i;
+
 export function StartRun({ onSubmit }: Props) {
   const form = useForm<Form>({
     resolver: zodResolver(schema),
@@ -23,6 +33,10 @@ export function StartRun({ onSubmit }: Props) {
   });
   const [selectedProvider, setSelectedProvider] = useState<string>("");
   const [selectedModel, setSelectedModel] = useState<string>("");
+
+  const reduceMotion = useReducedMotion();
+  const urlValue = form.watch("url");
+  const urlLooksValid = LOOKS_LIKE_URL.test(urlValue.trim());
 
   const handleFormSubmit = (data: Form) => {
     onSubmit(
@@ -34,11 +48,34 @@ export function StartRun({ onSubmit }: Props) {
   };
 
   return (
-    <main className="mx-auto grid min-h-[calc(100vh-118px)] max-w-6xl items-center gap-10 px-5 py-12 lg:grid-cols-[1.1fr_.9fr]">
+    <main className="relative mx-auto grid min-h-[calc(100vh-118px)] max-w-6xl items-center gap-10 overflow-hidden px-5 py-12 lg:grid-cols-[1.1fr_.9fr]">
+      {/* Iris scanline: single 1px sweep, 8s loop, barely-there opacity */}
+      {!reduceMotion && (
+        <motion.div
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 w-px bg-primary opacity-5"
+          initial={{ left: "0%" }}
+          animate={{ left: "100%" }}
+          transition={{ duration: 8, ease: "linear", repeat: Infinity }}
+        />
+      )}
       <div>
         <p className="text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground">Local autonomous apply</p>
         <h1 className="my-5 max-w-xl text-5xl font-semibold leading-[.95] tracking-tighter text-foreground sm:text-6xl">
-          Send a capable agent into the application.
+          {(reduceMotion
+            ? HEADLINE_LINES
+            : HEADLINE_LINES.map((line, i) => (
+                <motion.span
+                  key={line}
+                  className="block"
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: i * 0.06, ease: "easeOut" }}
+                >
+                  {line}
+                </motion.span>
+              ))
+          )}
         </h1>
         <p className="max-w-lg text-[17px] leading-relaxed text-muted-foreground">
           One persistent browser. Evidence-first actions. You remain the approving authority.
@@ -53,9 +90,16 @@ export function StartRun({ onSubmit }: Props) {
         </div>
       </div>
       <form
-        className="rounded-2xl border border-border bg-card p-6 shadow-md"
+        className="relative rounded-2xl border border-border bg-card p-6 shadow-md"
         onSubmit={form.handleSubmit(handleFormSubmit)}
       >
+        {/* Top edge lights up once the URL field looks like a real URL */}
+        <div
+          aria-hidden
+          className={`absolute inset-x-0 top-0 h-0.5 origin-left rounded-t-2xl bg-primary transition-[width] duration-500 ease-out ${
+            urlLooksValid ? "w-full" : "w-0"
+          }`}
+        />
         <p className="text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground">New application</p>
         <label className="mt-5 block text-xs text-foreground">
           Job URL
@@ -93,10 +137,15 @@ export function StartRun({ onSubmit }: Props) {
         {form.formState.errors.url && (
           <p className="mt-2 text-xs text-destructive">{form.formState.errors.url.message}</p>
         )}
-        <Button className="mt-5 flex w-full justify-between px-4 py-3" type="submit">
-          <span>Launch application</span>
-          <ArrowRight size={18} />
-        </Button>
+        <motion.div
+          className="mt-5"
+          whileTap={reduceMotion ? undefined : { scale: 0.98 }}
+        >
+          <Button className="flex w-full justify-between px-4 py-3" type="submit">
+            <span>Launch application</span>
+            <ArrowRight size={18} />
+          </Button>
+        </motion.div>
         <small className="mt-3 block text-center text-[10px] text-muted-foreground">
           Final submission is always gated by your explicit approval.
         </small>

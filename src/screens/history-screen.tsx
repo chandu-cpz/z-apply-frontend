@@ -19,6 +19,21 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: "done", label: "Done" },
 ];
 
+/**
+ * Queue priority tiers: the paused-on-you run is always at the top of the
+ * list, then work currently under human control or actively running, then
+ * anything merely queued, and finished runs sink to the bottom. Within a
+ * tier the chosen newest/oldest sort still applies.
+ */
+const QUEUE_TIERS: Record<Run["status"], number> = {
+  waiting_human: 0,
+  human_control: 1,
+  running: 1,
+  queued: 2,
+  starting: 2,
+  terminal: 3,
+};
+
 function openJobUrl(run: Run): void {
   window.open(run.job_url, "_blank", "noopener,noreferrer");
 }
@@ -37,14 +52,25 @@ function statusChip(run: Run): { label: string; cls: string; dot: string } {
   return getRunStatusMeta(run);
 }
 
+/** Left accent rail: warning for runs paused on you, primary for live work,
+ * nothing for queued or terminal rows. Rendered as an absolutely-positioned
+ * strip inside the nearest positioned ancestor (row cell / card). */
+function railFor(run: Run): string | null {
+  if (run.status === "waiting_human") return "bg-warning";
+  if (run.status === "running" || run.status === "human_control") return "bg-primary";
+  return null;
+}
+
 /** Application identity: company on top, role (or hostname) under it — never
- * the same string twice, full URL on hover. */
+ * the same string twice, full URL on hover. The top line reads like a
+ * hostname/machine identifier (mono, tabular); the role subtitle stays in
+ * the UI voice (Inter via default font stack). */
 function AppIdentity({ run }: { run: Run }) {
   const title = run.company || hostnameOf(run.job_url);
   const subtitle = run.role || (run.company ? hostnameOf(run.job_url) : "");
   return (
     <>
-      <p className="truncate text-sm font-semibold text-foreground" title={run.job_url}>
+      <p className="truncate font-mono text-[12.5px] font-medium tabular-nums text-foreground" title={run.job_url}>
         {title}
       </p>
       {subtitle && (
@@ -82,14 +108,55 @@ function startedAtMs(run: Run): number {
   return new Date(run.started_at || run.created_at).getTime();
 }
 
-function RunRowCard({ run, onOpen }: { run: Run; onOpen(run: Run): void }) {
+/** Coarse relative age ("just now", "12m ago", "3h ago", "2d ago"). */
+function relativeAge(ms: number): string {
+  const delta = Date.now() - ms;
+  if (!Number.isFinite(delta)) return "";
+  if (delta < 60_000) return "just now";
+  const minutes = Math.floor(delta / 60_000);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+/** Relative time cell; hover/title keeps the absolute timestamp. */
+function StartedAt({ iso }: { iso: string }) {
+  const ms = new Date(iso).getTime();
+  return (
+    <time className="font-mono text-[11px] tabular-nums text-muted-foreground" dateTime={iso} title={new Date(iso).toLocaleString()}>
+      {Number.isNaN(ms) ? "—" : relativeAge(ms)}
+    </time>
+  );
+}
+
+/** Outcome only earns a column when it adds information beyond the status
+ * chip; when it repeats the status label we collapse to an em-dash. */
+function outcomeLabel(run: Run): string {
+  if (!run.outcome) return "—";
+  const outcome = run.outcome.replaceAll("_", " ");
+  return outcome === statusChip(run).label ? "—" : outcome;
+}
+
+function StatusChip({ run }: { run: Run }) {
   const chip = statusChip(run);
   return (
+    <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium", chip.cls)}>
+      <span className={cn("size-1.5 rounded-full", chip.dot)} />
+      {chip.label}
+    </span>
+  );
+}
+
+function RunRowCard({ run, onOpen }: { run: Run; onOpen(run: Run): void }) {
+  const rail = railFor(run);
+  return (
     <button
-      className="w-full rounded-xl border border-border bg-card p-4 text-left transition hover:border-primary/40"
+      className="relative w-full overflow-hidden rounded-xl border border-border bg-card p-4 pl-5 text-left transition hover:border-primary/40"
       onClick={(event) => handleRowClick(run, event, onOpen)}
       title={run.job_url}
     >
+      {rail && <span aria-hidden className={cn("absolute inset-y-0 left-0 w-0.5", rail)} />}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <AppIdentity run={run} />
@@ -99,12 +166,10 @@ function RunRowCard({ run, onOpen }: { run: Run; onOpen(run: Run): void }) {
         </span>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium", chip.cls)}>
-          <span className={cn("size-1.5 rounded-full", chip.dot)} />
-          {chip.label}
+        <StatusChip run={run} />
+        <span className="ml-auto">
+          <StartedAt iso={run.started_at || run.created_at} />
         </span>
-        <span className="text-[11px] text-muted-foreground">{run.phase.replaceAll("_", " ")}</span>
-        <span className="ml-auto text-[11px] tabular-nums text-muted-foreground">{formatDate(run.started_at || run.created_at)}</span>
       </div>
     </button>
   );
@@ -152,9 +217,15 @@ export function HistoryScreen({ runs, onOpen }: { runs: Run[]; onOpen(run: Run):
   };
 
   const needle = (q ?? "").trim().toLowerCase();
+  /** Queue order first (needs you → live → queued → done); within each tier
+   * the URL-driven newest/oldest sort decides. */
   const filtered = runs
     .filter((run) => matchesQuery(run, needle) && matchesStatus(run, status))
-    .sort((a, b) => (sort === "oldest" ? startedAtMs(a) - startedAtMs(b) : startedAtMs(b) - startedAtMs(a)));
+    .sort((a, b) => {
+      const byTier = QUEUE_TIERS[a.status] - QUEUE_TIERS[b.status];
+      if (byTier !== 0) return byTier;
+      return sort === "oldest" ? startedAtMs(a) - startedAtMs(b) : startedAtMs(b) - startedAtMs(a);
+    });
 
   return (
     <PageShell title="Runs" description="Every application this cockpit has run. Open one to see the full conversation, browser state, and artifacts. Ctrl/Cmd+click a row to open the job posting.">
@@ -179,7 +250,7 @@ export function HistoryScreen({ runs, onOpen }: { runs: Run[]; onOpen(run: Run):
           variant="outline"
           size="sm"
           onClick={toggleSort}
-          title={`Sorted by ${sort === "newest" ? "newest first" : "oldest first"} — click to flip`}
+          title={`Sort within groups by ${sort === "newest" ? "newest first" : "oldest first"} — click to flip`}
         >
           <ArrowUpDown size={14} />
           {sort === "newest" ? "Newest" : "Oldest"}
@@ -199,36 +270,37 @@ export function HistoryScreen({ runs, onOpen }: { runs: Run[]; onOpen(run: Run):
         <table className="w-full table-fixed text-left text-[13px]">
           <thead className="bg-muted/40 text-[11px] uppercase tracking-[0.05em] text-muted-foreground">
             <tr>
-              <th className="w-[30%] px-4 py-3 font-medium">Application</th>
-              <th className="w-[14%] px-4 py-3 font-medium">Status</th>
-              <th className="w-[14%] px-4 py-3 font-medium">Phase</th>
-              <th className="w-[16%] px-4 py-3 font-medium">Outcome</th>
-              <th className="w-[18%] px-4 py-3 font-medium">Started</th>
+              <th className="w-[32%] px-4 py-3 font-medium">Application</th>
+              <th className="w-[16%] px-4 py-3 font-medium">Status</th>
+              <th className="w-[18%] px-4 py-3 font-medium">Outcome</th>
+              <th className="w-[22%] px-4 py-3 font-medium">Started</th>
               <th className="w-12" />
             </tr>
           </thead>
           <tbody>
             {filtered.map((run) => {
-              const chip = statusChip(run);
+              const rail = railFor(run);
               return (
                 <tr
-                  className="group cursor-pointer border-t border-border transition-colors hover:bg-muted/40"
+                  className={cn(
+                    "group cursor-pointer border-t border-border transition-colors hover:bg-muted/40",
+                    run.status === "terminal" && "text-muted-foreground/70",
+                  )}
                   key={run.id}
                   onClick={(event) => handleRowClick(run, event, onOpen)}
                   title={run.job_url}
                 >
-                  <td className="px-4 py-2">
+                  <td className="relative px-4 py-2">
+                    {rail && <span aria-hidden className={cn("absolute inset-y-0 left-0 w-0.5", rail)} />}
                     <AppIdentity run={run} />
                   </td>
                   <td className="px-4 py-2">
-                    <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium", chip.cls)}>
-                      <span className={cn("size-1.5 rounded-full", chip.dot)} />
-                      {chip.label}
-                    </span>
+                    <StatusChip run={run} />
                   </td>
-                  <td className="px-4 py-2 capitalize text-muted-foreground">{run.phase.replaceAll("_", " ")}</td>
-                  <td className="px-4 py-2 capitalize text-muted-foreground">{run.outcome?.replaceAll("_", " ") || "—"}</td>
-                  <td className="px-4 py-2 text-muted-foreground">{formatDate(run.started_at || run.created_at)}</td>
+                  <td className="px-4 py-2 capitalize text-muted-foreground">{outcomeLabel(run)}</td>
+                  <td className="px-4 py-2">
+                    <StartedAt iso={run.started_at || run.created_at} />
+                  </td>
                   <td>
                     <button
                       type="button"
@@ -272,8 +344,4 @@ function NoMatchState({ onClear }: { onClear(): void }) {
       </Button>
     </div>
   );
-}
-
-function formatDate(value: string): string {
-  return new Date(value).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
 }
