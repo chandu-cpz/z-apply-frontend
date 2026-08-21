@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>Z-Apply / Command Deck</title>
+    <script>
+      // Pre-paint theme: dark is the default; an explicit "light" choice wins.
+      // Runs before first paint so dark users never see a white flash.
+      try {
+        if (localStorage.getItem("theme") !== "light") document.documentElement.classList.add("dark");
+      } catch {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

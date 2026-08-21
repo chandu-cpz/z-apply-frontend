@@ -1,8 +1,29 @@
 import type { Run } from "../types";
 
+/**
+ * Single source of truth for run status presentation. Every chip, dot, rail
+ * row, and banner pulls from here; feature files never hand-pick status
+ * colors. Labels mirror backend truth: status/outcome strings come straight
+ * off the run payload, nothing invented.
+ *
+ * Classes use semantic tokens only (bg-success, text-warning, ...) so theme
+ * and contrast live in styles.css.
+ */
+
 export type RunState = "submitted" | "failed" | "waiting" | "running" | "finished";
 
-export function getRunStatusMeta(run: Run): { state: RunState; label: string; cls: string; dot: string } {
+export interface RunStatusMeta {
+  state: RunState;
+  label: string;
+  /** Chip/pill treatment: surface + text. */
+  cls: string;
+  /** Status dot color (+ pulse while actively working or blocked on you). */
+  dot: string;
+  /** For Badge-style consumers that take a variant instead of classes. */
+  variant: "success" | "destructive" | "warning" | "running" | "neutral";
+}
+
+export function getRunStatusMeta(run: Run): RunStatusMeta {
   const submitted = run.outcome === "submitted_verified";
   const failed = run.status === "terminal" && !submitted && run.outcome !== "cancelled";
   const waiting = run.status === "waiting_human" || run.status === "human_control";
@@ -12,38 +33,43 @@ export function getRunStatusMeta(run: Run): { state: RunState; label: string; cl
     return {
       state: "submitted",
       label: "submitted",
-      cls: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
-      dot: "bg-emerald-500",
+      cls: "bg-success/10 text-success",
+      dot: "bg-success",
+      variant: "success",
     };
   }
   if (failed) {
     return {
       state: "failed",
-      label: "failed",
-      cls: "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
-      dot: "bg-rose-500",
+      label: run.outcome?.replaceAll("_", " ") || "failed",
+      cls: "bg-destructive/10 text-destructive",
+      dot: "bg-destructive",
+      variant: "destructive",
     };
   }
   if (waiting) {
     return {
       state: "waiting",
       label: "needs you",
-      cls: "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
-      dot: "bg-amber-500 animate-pulse",
+      cls: "bg-warning/15 text-warning",
+      dot: "bg-warning animate-pulse",
+      variant: "warning",
     };
   }
   if (running) {
     return {
       state: "running",
-      label: "running",
-      cls: "bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300",
-      dot: "bg-violet-500 animate-pulse",
+      label: run.status === "starting" ? "starting" : "running",
+      cls: "bg-running/10 text-primary",
+      dot: "bg-primary animate-pulse",
+      variant: "running",
     };
   }
   return {
     state: "finished",
-    label: run.outcome?.replaceAll("_", " ") || "finished",
-    cls: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300",
-    dot: "bg-zinc-400",
+    label: run.outcome?.replaceAll("_", " ") || (run.status === "queued" ? "queued" : "finished"),
+    cls: "bg-muted text-muted-foreground",
+    dot: "bg-muted-foreground",
+    variant: "neutral",
   };
 }

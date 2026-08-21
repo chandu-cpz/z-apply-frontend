@@ -23,6 +23,10 @@ export const runSchema = z.object({
   current_model: z.string().nullable(),
   current_provider: z.string().nullable().optional().default(null),
   browser_tab_state: z.string(),
+  /** Mirrors backend RunResponse so command responses seed the store with
+   * control truth instead of waiting for the next live-view poll. */
+  control_mode: z.enum(["agent_control", "human_control"]).optional().default("agent_control"),
+  pending_human_request_id: z.string().nullable().optional().default(null),
   latest_run_sequence: z.number().int().nonnegative(),
   created_at: z.string(),
   started_at: z.string().nullable(),
@@ -70,7 +74,9 @@ export const humanRequestSchema = z.object({
 
 export const liveViewSchema = z.object({
   available: z.boolean(),
-  websocket_url: z.string().optional(),
+  // Backend serializes null when no browser workspace exists (browser.py
+  // sends "websocket_url": null); optional alone would fail every poll.
+  websocket_url: z.string().nullable().optional(),
   vnc_host: z.string().nullable().optional(),
   vnc_port: z.number().int().nullable().optional(),
   control_mode: z.enum(["agent_control", "human_control"]),
@@ -123,6 +129,7 @@ export const diagnosticsSchema = z.object({
   max_active_runs: z.number().int(),
   active_runs: z.number().int(),
   live_view: z.boolean(),
+  live_stream: z.boolean().optional(),
   database: z.string(),
 });
 

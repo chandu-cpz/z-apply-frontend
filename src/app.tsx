@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useParams, useRouterState } from "@tanstack/react-
 import { Group, Panel, Separator, useDefaultLayout, usePanelRef } from "react-resizable-panels";
 import { Archive, Bot, BriefcaseBusiness, Command, Gauge, History, Monitor, Moon, PanelLeftClose, PanelRightClose, Plus, Settings, Sun } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { api } from "./api";
 import { hostnameOf, runAttentionLabel } from "./lib/format";
@@ -19,14 +20,12 @@ import { useEventStream, useLiveEventStream } from "./hooks";
 import { ArtifactsScreen } from "./screens/artifacts-screen";
 import { HistoryScreen } from "./screens/history-screen";
 import type { Run } from "./types";
-import { useUiStore } from "./ui-store";
 
 /* ------------------------------------------------------------------ */
 /* Shell (root route): theme, header, SSE bootstrap, attention toasts  */
 /* ------------------------------------------------------------------ */
 
 export function AppShell() {
-  const theme = useUiStore((state) => state.theme);
   const streamStatus = useEventStream();
   useLiveEventStream();
   // Bootstrap only: the SSE stream owns run state from here on (sync store).
@@ -70,7 +69,7 @@ export function AppShell() {
     }
   }, [navigate, runs]);
 
-  return <div className={`${theme === "dark" ? "dark" : ""} min-h-screen bg-stone-100 font-sans text-stone-950 antialiased dark:bg-zinc-950 dark:text-zinc-100`}>
+  return <div className="min-h-screen bg-stone-100 font-sans text-stone-950 antialiased dark:bg-zinc-950 dark:text-zinc-100">
     <Header streamStatus={streamStatus} />
     <Outlet />
   </div>;
@@ -95,8 +94,7 @@ export function NotFound() {
 /* ------------------------------------------------------------------ */
 
 function Header({ streamStatus }: { streamStatus: string }) {
-  const theme = useUiStore((state) => state.theme);
-  const toggleTheme = useUiStore((state) => state.toggleTheme);
+  const { resolvedTheme, setTheme } = useTheme();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const params = useParams({ strict: false });
@@ -120,8 +118,8 @@ function Header({ streamStatus }: { streamStatus: string }) {
           <span className={`size-1.5 rounded-full ${streamStatus === "connected" ? "bg-emerald-400" : "bg-amber-400"}`} />
           <span className="hidden sm:inline">{streamStatus}</span>
         </span>
-        <button className="grid size-8 shrink-0 place-items-center rounded-md text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={toggleTheme} title="Toggle color theme">
-          {theme === "light" ? <Moon size={15} /> : <Sun size={15} />}
+        <button className="grid size-8 shrink-0 place-items-center rounded-md text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")} title="Toggle color theme">
+          {resolvedTheme === "light" ? <Moon size={15} /> : <Sun size={15} />}
         </button>
       </div>
     </header>

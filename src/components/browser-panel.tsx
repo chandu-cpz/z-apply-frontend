@@ -8,7 +8,7 @@ interface Props { run: Run; live?: LiveView; returning?: boolean; busy?: boolean
 /** The backend builds the WS URL from the request Host, but the Vite proxy rewrites Host to 127.0.0.1:8000,
  *  so remote clients (e.g. phone on Tailscale) receive a URL pointing at themselves. Rebuild it against the
  *  page origin; Vite forwards /api including WebSockets to the backend. */
-function reachableWsUrl(raw?: string): string | undefined {
+function reachableWsUrl(raw?: string | null): string | undefined {
   if (!raw) return undefined;
   try {
     const url = new URL(raw);
