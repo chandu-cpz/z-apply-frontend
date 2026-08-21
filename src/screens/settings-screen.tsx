@@ -93,8 +93,36 @@ export function SettingsScreen() {
         </div>
         <div className="rounded-xl border border-border bg-card p-5">
           <h2 className="text-sm font-semibold">Documents</h2>
-          {documents.data?.length ? (
-            <pre className="mt-3 overflow-auto text-xs text-muted-foreground">
+          {Array.isArray(documents.data) ? (
+            documents.data.length ? (
+              <ul className="mt-3 space-y-3">
+                {documents.data.map((doc, index) => {
+                  const { name, url, meta } = documentParts(doc);
+                  return (
+                    <li key={index} className="rounded-lg border border-border bg-muted/40 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="min-w-0 truncate text-sm font-medium text-foreground">{name}</span>
+                        {url && (
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="shrink-0 text-xs font-medium text-primary hover:underline"
+                          >
+                            Download
+                          </a>
+                        )}
+                      </div>
+                      {meta && <p className="mt-1 truncate text-xs text-muted-foreground">{meta}</p>}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="mt-3 text-sm text-muted-foreground">No documents were exposed by the backend.</p>
+            )
+          ) : documents.data ? (
+            <pre className="mt-3 overflow-auto rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
               {JSON.stringify(documents.data, null, 2)}
             </pre>
           ) : (
@@ -104,6 +132,25 @@ export function SettingsScreen() {
       </section>
     </PageShell>
   );
+}
+
+const DOCUMENT_NAME_KEYS = ["name", "filename", "file_name", "title"];
+const DOCUMENT_URL_KEYS = ["url", "download_url", "href", "link"];
+
+/** documentSchema is a plain Record<string, string>; pick the friendliest
+ * fields for display and fold the rest into one metadata line. */
+function documentParts(doc: Record<string, string>) {
+  const nameKey = DOCUMENT_NAME_KEYS.find((key) => key in doc);
+  const urlKey = DOCUMENT_URL_KEYS.find((key) => key in doc);
+  const meta = Object.entries(doc)
+    .filter(([key]) => key !== nameKey && key !== urlKey)
+    .map(([key, value]) => `${key}: ${value}`)
+    .join(" · ");
+  return {
+    name: (nameKey && doc[nameKey]) || Object.values(doc)[0] || "Untitled document",
+    url: urlKey ? doc[urlKey] : undefined,
+    meta,
+  };
 }
 
 function Capability({ label, enabled }: { label: string; enabled?: boolean }) {

@@ -12,7 +12,9 @@ import { runSchema } from "./schemas";
 import { useRun, useRuns, useSyncStore } from "./sync-store";
 import { AgentConversation } from "./components/agent-conversation";
 import { AgentsDrawer } from "./components/agents-drawer";
+import { AttentionBell } from "./components/attention-bell";
 import { BrowserPanel } from "./components/browser-panel";
+import { CommandPalette } from "./components/command-palette";
 import { RunContext } from "./components/run-context";
 import { RunRail } from "./components/run-tabs";
 import { StartRun } from "./components/start-run";
@@ -37,6 +39,8 @@ export function AppShell() {
 
   const navigate = useNavigate();
   const notifiedRuns = useRef(new Set<string>());
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const gPressedAt = useRef(0);
   useEffect(() => {
     // Every run waiting on a human gets a persistent sonner toast (bottom-
     // right, rich warning) that survives until the run resolves or is
@@ -69,9 +73,40 @@ export function AppShell() {
     }
   }, [navigate, runs]);
 
+  // Global shortcuts: n = new application, g then r (within 800ms) = history,
+  // / = focus the run composer, falling back to the palette, ? = palette.
+  // Skipped while typing in any field or while the palette itself is open.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (!target || target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+      if (paletteOpen) return;
+      if (event.key === "?") {
+        event.preventDefault();
+        setPaletteOpen(true);
+      } else if (event.key === "/") {
+        event.preventDefault();
+        const composer = document.querySelector<HTMLTextAreaElement>('textarea[data-slot="textarea"]');
+        if (composer) composer.focus();
+        else setPaletteOpen(true);
+      } else if (event.key === "n") {
+        void navigate({ to: "/" });
+      } else if (event.key === "g") {
+        gPressedAt.current = Date.now();
+      } else if (event.key === "r" && Date.now() - gPressedAt.current <= 800) {
+        gPressedAt.current = 0;
+        void navigate({ to: "/history" });
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [navigate, paletteOpen]);
+
   return <div className="min-h-screen bg-background font-sans text-foreground antialiased">
     <Header streamStatus={streamStatus} />
     <Outlet />
+    <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
   </div>;
 }
 
@@ -114,6 +149,7 @@ function Header({ streamStatus }: { streamStatus: string }) {
       </nav>
       <div className="ml-auto flex min-w-0 items-center gap-2.5">
         {active && <ActiveRunChip run={active} />}
+        <AttentionBell />
         <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground" title="Live event stream">
           <span className={`size-1.5 rounded-full ${streamStatus === "connected" ? "bg-success" : "bg-warning"}`} />
           <span className="hidden sm:inline">{streamStatus}</span>

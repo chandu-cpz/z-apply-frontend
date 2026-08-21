@@ -1,9 +1,23 @@
-import { ArrowUpRight, ExternalLink } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { ArrowUpDown, ArrowUpRight, ExternalLink } from "lucide-react";
 import { hostnameOf } from "../lib/format";
 import { getRunStatusMeta } from "../lib/run-status";
 import { cn } from "../lib/utils";
 import type { Run } from "../types";
 import { PageShell } from "../components/page-shell";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
+
+type StatusFilter = "all" | "active" | "needs_you" | "done";
+
+const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "active", label: "Active" },
+  { value: "needs_you", label: "Needs you" },
+  { value: "done", label: "Done" },
+];
 
 function openJobUrl(run: Run): void {
   window.open(run.job_url, "_blank", "noopener,noreferrer");
@@ -42,6 +56,32 @@ function AppIdentity({ run }: { run: Run }) {
   );
 }
 
+function matchesQuery(run: Run, needle: string): boolean {
+  if (!needle) return true;
+  return (
+    (run.company ?? "").toLowerCase().includes(needle) ||
+    (run.role ?? "").toLowerCase().includes(needle) ||
+    run.job_url.toLowerCase().includes(needle)
+  );
+}
+
+function matchesStatus(run: Run, status: StatusFilter): boolean {
+  switch (status) {
+    case "active":
+      return run.status === "queued" || run.status === "starting" || run.status === "running";
+    case "needs_you":
+      return run.status === "waiting_human" || run.status === "human_control";
+    case "done":
+      return run.status === "terminal";
+    default:
+      return true;
+  }
+}
+
+function startedAtMs(run: Run): number {
+  return new Date(run.started_at || run.created_at).getTime();
+}
+
 function RunRowCard({ run, onOpen }: { run: Run; onOpen(run: Run): void }) {
   const chip = statusChip(run);
   return (
@@ -71,13 +111,89 @@ function RunRowCard({ run, onOpen }: { run: Run; onOpen(run: Run): void }) {
 }
 
 export function HistoryScreen({ runs, onOpen }: { runs: Run[]; onOpen(run: Run): void }) {
+  const navigate = useNavigate();
+  const { q, status = "all", sort = "newest" } = useSearch({ from: "/history" });
+
+  /** Search box keeps a local draft so typing is smooth; it commits to the URL
+   * after a 250ms pause. committedQ tracks what the URL already reflects so
+   * external q changes (back nav, Clear filters) resync the draft without
+   * clobbering in-flight typing. */
+  const [queryDraft, setQueryDraft] = useState(q ?? "");
+  const committedQ = useRef(q ?? "");
+
+  useEffect(() => {
+    if (q === committedQ.current) return;
+    committedQ.current = q ?? "";
+    setQueryDraft(q ?? "");
+  }, [q]);
+
+  useEffect(() => {
+    const next = queryDraft.trim();
+    if (next === committedQ.current) return;
+    const timer = setTimeout(() => {
+      committedQ.current = next;
+      navigate({ to: "/history", search: (prev) => ({ ...prev, q: next || undefined }) });
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [queryDraft]);
+
+  const setStatusFilter = (next: string) => {
+    navigate({ to: "/history", search: (prev) => ({ ...prev, status: next === "all" ? undefined : (next as StatusFilter) }) });
+  };
+
+  const toggleSort = () => {
+    navigate({ to: "/history", search: (prev) => ({ ...prev, sort: sort === "newest" ? "oldest" : undefined }) });
+  };
+
+  const clearFilters = () => {
+    committedQ.current = "";
+    setQueryDraft("");
+    navigate({ to: "/history", search: { q: undefined, status: undefined, sort: undefined } });
+  };
+
+  const needle = (q ?? "").trim().toLowerCase();
+  const filtered = runs
+    .filter((run) => matchesQuery(run, needle) && matchesStatus(run, status))
+    .sort((a, b) => (sort === "oldest" ? startedAtMs(a) - startedAtMs(b) : startedAtMs(b) - startedAtMs(a)));
+
   return (
     <PageShell title="Runs" description="Every application this cockpit has run. Open one to see the full conversation, browser state, and artifacts. Ctrl/Cmd+click a row to open the job posting.">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Input
+          aria-label="Search applications"
+          className="h-9 w-full sm:w-64"
+          placeholder="Search company, role, or URL"
+          value={queryDraft}
+          onChange={(event) => setQueryDraft(event.target.value)}
+        />
+        <Tabs value={status} onValueChange={setStatusFilter}>
+          <TabsList>
+            {STATUS_FILTERS.map((option) => (
+              <TabsTrigger key={option.value} value={option.value}>
+                {option.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={toggleSort}
+          title={`Sorted by ${sort === "newest" ? "newest first" : "oldest first"} — click to flip`}
+        >
+          <ArrowUpDown size={14} />
+          {sort === "newest" ? "Newest" : "Oldest"}
+        </Button>
+        <p className="ml-auto text-[11px] uppercase tracking-[0.05em] text-muted-foreground">
+          {filtered.length} of {runs.length} applications
+        </p>
+      </div>
       <div className="grid gap-3 md:hidden">
-        {runs.map((run) => (
+        {filtered.map((run) => (
           <RunRowCard key={run.id} run={run} onOpen={onOpen} />
         ))}
         {runs.length === 0 && <EmptyState />}
+        {runs.length > 0 && filtered.length === 0 && <NoMatchState onClear={clearFilters} />}
       </div>
       <div className="hidden overflow-hidden rounded-xl border border-border bg-card md:block">
         <table className="w-full table-fixed text-left text-[13px]">
@@ -92,7 +208,7 @@ export function HistoryScreen({ runs, onOpen }: { runs: Run[]; onOpen(run: Run):
             </tr>
           </thead>
           <tbody>
-            {runs.map((run) => {
+            {filtered.map((run) => {
               const chip = statusChip(run);
               return (
                 <tr
@@ -132,6 +248,7 @@ export function HistoryScreen({ runs, onOpen }: { runs: Run[]; onOpen(run: Run):
           </tbody>
         </table>
         {runs.length === 0 && <EmptyState />}
+        {runs.length > 0 && filtered.length === 0 && <NoMatchState onClear={clearFilters} />}
       </div>
     </PageShell>
   );
@@ -142,6 +259,17 @@ function EmptyState() {
     <div className="p-10 text-center">
       <p className="text-sm text-muted-foreground">No applications have been recorded yet.</p>
       <p className="mt-1 text-xs text-muted-foreground/70">Start one from the New screen and it will appear here.</p>
+    </div>
+  );
+}
+
+function NoMatchState({ onClear }: { onClear(): void }) {
+  return (
+    <div className="p-10 text-center">
+      <p className="text-sm text-muted-foreground">No applications match.</p>
+      <Button variant="ghost" size="sm" className="mt-3" onClick={onClear}>
+        Clear filters
+      </Button>
     </div>
   );
 }

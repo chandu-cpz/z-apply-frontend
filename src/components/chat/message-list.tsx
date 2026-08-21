@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { ArrowDown, BriefcaseBusiness } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { hostnameOf } from "@/lib/format";
@@ -160,41 +161,76 @@ export function MessageList({ runId, events, run, onAnswer, onDecide }: { runId:
   }, [timeline, liveAgents]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const followDown = useRef(true);
+  const headerBlockRef = useRef<HTMLDivElement>(null);
   const [jumpVisible, setJumpVisible] = useState(false);
+  // The virtualized list starts below the run header / activity strip inside
+  // the same scroller. scrollMargin shifts every row offset into scroller
+  // coordinates so anchorTo, followOnAppend and scrollToEnd land exactly.
+  const [listTop, setListTop] = useState(0);
+  useLayoutEffect(() => {
+    const el = headerBlockRef.current;
+    if (!el) return;
+    const update = () => setListTop(el.offsetHeight);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 72,
+    overscan: 6,
+    getItemKey: (index) => rowKey(rows[index]),
+    scrollMargin: listTop,
+    anchorTo: "end",
+    followOnAppend: true,
+    scrollEndThreshold: FOLLOW_THRESHOLD_PX,
+  });
 
   const onScroll = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - FOLLOW_THRESHOLD_PX;
-    followDown.current = atBottom;
-    setJumpVisible(!atBottom);
+    setJumpVisible(!virtualizer.isAtEnd());
   };
 
+  // Opening a run lands on its latest message (the old follow effect did this
+  // on mount because followDown started true); afterwards anchorTo +
+  // followOnAppend keep the tail pinned while rows stream in.
+  const landedForRun = useRef<string | null>(null);
   useEffect(() => {
-    if (!followDown.current) return;
-    const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [events.length, liveAgents.length, run.latest_run_sequence]);
+    if (rows.length === 0 || landedForRun.current === runId) return;
+    landedForRun.current = runId;
+    virtualizer.scrollToEnd();
+  }, [runId, rows.length, virtualizer]);
 
   const jumpToLatest = () => {
-    const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    virtualizer.scrollToEnd();
   };
 
   return (
     <section className="relative flex h-full min-h-0 flex-col bg-background">
       <div ref={scrollRef} onScroll={onScroll} className="min-h-0 flex-1 overflow-y-auto overscroll-contain" role="log" aria-live="polite">
-        <div className="mx-auto w-full max-w-[700px] px-5 py-7">
-          <RunHeader run={run} />
-          <ActivityStrip activity={activity} />
-          {rows.length === 0 && <EmptyState />}
-          {rows.map((row) => (
-            <div key={rowKey(row)}>
-              <RowRenderer row={row} onAnswer={onAnswer} onDecide={onDecide} />
+        <div ref={headerBlockRef}>
+          <div className="mx-auto w-full max-w-[700px] px-5 pt-7">
+            <RunHeader run={run} />
+            <ActivityStrip activity={activity} />
+            {rows.length === 0 && <EmptyState />}
+          </div>
+        </div>
+        <div className="relative mx-auto w-full max-w-[700px]" style={{ height: `${virtualizer.getTotalSize()}px` }}>
+          {virtualizer.getVirtualItems().map((virtualRow) => (
+            <div
+              key={virtualRow.key}
+              data-index={virtualRow.index}
+              ref={virtualizer.measureElement}
+              className="absolute left-0 top-0 w-full px-5"
+              style={{ transform: `translateY(${virtualRow.start}px)` }}
+            >
+              <RowRenderer row={rows[virtualRow.index]} onAnswer={onAnswer} onDecide={onDecide} />
             </div>
           ))}
         </div>
+        <div className="h-7" />
       </div>
       {jumpVisible && (
         <button

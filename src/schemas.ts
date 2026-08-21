@@ -129,7 +129,17 @@ export const diagnosticsSchema = z.object({
   max_active_runs: z.number().int(),
   active_runs: z.number().int(),
   live_view: z.boolean(),
-  live_stream: z.boolean().optional(),
+  /** Backend sends a live-stream hub snapshot object, not a flag. */
+  live_stream: z
+    .object({
+      subscribers: z.number().int(),
+      dropped_events: z.number().int(),
+      total_dropped_events: z.number().int(),
+      replay_limit: z.number().int(),
+      replay_size: z.number().int(),
+      replay_newest_seq: z.number().int().nullable(),
+    })
+    .optional(),
   database: z.string(),
 });
 
