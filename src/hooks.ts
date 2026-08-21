@@ -98,15 +98,22 @@ export function useEventStream(): StreamStatus {
       scheduleFlush(event.database_id);
     },
     () => {
-      // Reconnect reconciliation: the server replays from Last-Event-ID and
-      // store patches converge local state; one runs refetch covers any
-      // residual drift (e.g. silent server-side mutations). Skipped on the
+      // Reconnect reconciliation: the server replays from Last-Event-ID, but
+      // its replay window can sit below our watermark (cursor semantics may
+      // shift across backend restarts without a cursor.reset), so drop the
+      // watermark and let the replay re-patch state instead of being silently
+      // discarded as "already applied". Invalidate the fetched queries too:
+      // events missed while offline leave non-run data stale. Skipped on the
       // initial connect, where bootstrap queries just fetched.
       if (!hasConnected.current) {
         hasConnected.current = true;
         return;
       }
+      useSyncStore.setState({ lastAppliedId: 0 });
       void client.invalidateQueries({ queryKey: ["runs"] });
+      void client.invalidateQueries({ queryKey: ["live"] });
+      void client.invalidateQueries({ queryKey: ["calls"] });
+      void client.invalidateQueries({ queryKey: ["run-artifacts"] });
     },
   );
 }
