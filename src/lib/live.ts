@@ -1,5 +1,6 @@
 import type { ActivityEvent, LiveActivityEvent } from "../types";
 import { num, str } from "./format";
+import { liveAgentOf } from "./agent";
 
 export interface LiveToolCall {
   index: number;
@@ -30,11 +31,7 @@ export interface LiveAgent {
 
 export const EMPTY_LIVELY: LiveActivityEvent[] = [];
 
-export function liveAgentOf(source: Record<string, string>, fallback?: unknown): string {
-  const candidate = source.agent || source.name || str(fallback);
-  if (!candidate) return "orchestrator";
-  return candidate.split(":", 1)[0];
-}
+export { liveAgentOf };
 
 export function turnBoundaries(events: ActivityEvent[]): Map<string, number> {
   const map = new Map<string, number>();

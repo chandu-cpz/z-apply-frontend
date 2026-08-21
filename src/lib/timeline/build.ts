@@ -1,11 +1,11 @@
 import type { ActivityEvent } from "../../types";
 import { asRecord, humanModel, num, str, textOf } from "../format";
+import { agentOf } from "../agent";
 import { itemSeq, type AgentSegmentItem, type AgentRun, type TimelineItem, type ToolItem } from "./types";
 
-export function agentOf(event: Pick<ActivityEvent, "source" | "payload">): string {
-  const candidate = event.source.agent || str(event.payload.agent) || "core";
-  return candidate.split(":", 1)[0];
-}
+// ---------------------------------------------------------------------------
+// Shared helpers (kept private - not transforms)
+// ---------------------------------------------------------------------------
 
 /** Best-effort parent agent label from an agent.started payload path. */
 function parentOf(event: Pick<ActivityEvent, "payload">): string | undefined {
@@ -75,17 +75,19 @@ function eventDetail(event: ActivityEvent): string {
   return text.slice(0, 240);
 }
 
-export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
-  const items: TimelineItem[] = [];
-  const modelByAgent = new Map<string, string>();
-  let runModel: string | undefined;
-  const tools = new Map<string, ToolItem>();
-  const pendingUsage = new Map<string, { inputTokens: number; outputTokens: number; tokPerSecond: number; calls: number; durationMs: number }>();
-  const parentByLabel = new Map<string, string | undefined>();
+// ---------------------------------------------------------------------------
+// Transform 1: buildStall is part of raw parsing
+// It is exposed as a testable helper below.
+// ---------------------------------------------------------------------------
 
-  // Stall detection: many consecutive model calls with NO progress (no completed
-  // turn, no tool, no browser/human/submission activity) means the agent spun
-  // in place — render it as one visible "stalled" line instead of a silent gap.
+export interface StallTracker {
+  noteModelCall(seq: number, occurredAt: string): void;
+  handleProgressType(type: string): void;
+  flush(into: TimelineItem[]): void;
+  get calls(): number;
+}
+
+export function buildStall(into: TimelineItem[]): StallTracker {
   const PROGRESS_TYPES = new Set([
     "agent.turn.completed",
     "tool.started",
@@ -101,28 +103,50 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
   let stallCalls = 0;
   let stallStart: { seq: number; occurredAt: string } | null = null;
   let stallLastAt = "";
-  const flushStall = () => {
-    if (stallStart !== null && stallCalls >= 12) {
-      const seconds = Math.max(0, Math.round((Date.parse(stallLastAt) - Date.parse(stallStart.occurredAt)) / 1000));
-      items.push({
-        kind: "stall",
-        seq: stallStart.seq,
-        calls: stallCalls,
-        seconds,
-        occurredAt: stallStart.occurredAt,
-        endedAt: stallLastAt || stallStart.occurredAt,
-      });
-    }
-    stallCalls = 0;
-    stallStart = null;
-    stallLastAt = "";
+  const emitStall = (target: TimelineItem[]) => {
+    if (stallStart === null || stallCalls < 12) return;
+    const seconds = Math.max(0, Math.round((Date.parse(stallLastAt) - Date.parse(stallStart.occurredAt)) / 1000));
+    target.push({
+      kind: "stall",
+      seq: stallStart.seq,
+      calls: stallCalls,
+      seconds,
+      occurredAt: stallStart.occurredAt,
+      endedAt: stallLastAt || stallStart.occurredAt,
+    });
   };
-  const noteModelCall = (seq: number, occurredAt: string) => {
-    if (stallStart === null) stallStart = { seq, occurredAt };
-    stallCalls += 1;
-    stallLastAt = occurredAt;
+  return {
+    get calls() {
+      return stallCalls;
+    },
+    noteModelCall(seq: number, occurredAt: string) {
+      if (stallStart === null) stallStart = { seq, occurredAt };
+      stallCalls += 1;
+      stallLastAt = occurredAt;
+    },
+    handleProgressType(type: string) {
+      if (PROGRESS_TYPES.has(type)) {
+        emitStall(into);
+        stallCalls = 0;
+        stallStart = null;
+        stallLastAt = "";
+      }
+    },
+    flush(target: TimelineItem[]) {
+      emitStall(target);
+    },
   };
+}
 
+// Raw parse: events -> sorted raw items + parent map. Keeps the big loop but delegates stall/usage.
+function parseRaw(events: ActivityEvent[]): { items: TimelineItem[]; parentByLabel: Map<string, string | undefined> } {
+  const items: TimelineItem[] = [];
+  const modelByAgent = new Map<string, string>();
+  let runModel: string | undefined;
+  const tools = new Map<string, ToolItem>();
+  const modelUsageMap = new Map<string, { inputTokens: number; outputTokens: number; tokPerSecond: number; calls: number; durationMs: number }>();
+  const parentByLabel = new Map<string, string | undefined>();
+  const stall = buildStall(items);
   const modelFor = (agent: string): string | undefined => modelByAgent.get(agent) || runModel;
 
   for (const event of events) {
@@ -133,10 +157,10 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
     const occurredAt = event.occurred_at;
     if (type === "graph.event") continue;
 
-    if (PROGRESS_TYPES.has(type)) flushStall();
+    stall.handleProgressType(type);
 
     if (type === "model.call_completed" || type === "model.call.metrics") {
-      noteModelCall(seq, occurredAt);
+      stall.noteModelCall(seq, occurredAt);
       continue;
     }
 
@@ -147,13 +171,13 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
         modelByAgent.set(usageAgent, model);
         runModel = model;
       }
-      const acc = pendingUsage.get(usageAgent) ?? { inputTokens: 0, outputTokens: 0, tokPerSecond: 0, calls: 0, durationMs: 0 };
-      acc.inputTokens += Math.round(num(payload.input_tokens));
-      acc.outputTokens += Math.round(num(payload.output_tokens));
-      acc.tokPerSecond += num(payload.tok_per_second);
-      acc.calls += 1;
-      acc.durationMs = num(payload.duration_ms);
-      pendingUsage.set(usageAgent, acc);
+      const cur = modelUsageMap.get(usageAgent) ?? { inputTokens: 0, outputTokens: 0, tokPerSecond: 0, calls: 0, durationMs: 0 };
+      cur.inputTokens += Math.round(num(payload.input_tokens));
+      cur.outputTokens += Math.round(num(payload.output_tokens));
+      cur.tokPerSecond += num(payload.tok_per_second);
+      cur.calls += 1;
+      cur.durationMs = num(payload.duration_ms);
+      modelUsageMap.set(usageAgent, cur);
       continue;
     }
 
@@ -179,7 +203,10 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
     if (type === "agent.turn.completed") {
       const turnModel = str(payload.model) || modelFor(agent);
       const usageRaw = asRecord(payload.usage);
-      const usage = pendingUsage.get(agent) ?? {
+      // per-agent usage accumulated from model.usage events; falls back to the
+      // turn payload when no metrics arrived for this agent
+      const pending = modelUsageMap.get(agent);
+      const usage = pending ?? {
         inputTokens: Math.round(num(usageRaw.input_tokens)),
         outputTokens: Math.round(num(usageRaw.output_tokens)),
         tokPerSecond: num(usageRaw.tok_per_second),
@@ -211,7 +238,7 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
           toolCalls,
         },
       });
-      pendingUsage.delete(agent);
+      modelUsageMap.delete(agent);
       continue;
     }
 
@@ -373,12 +400,20 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
   for (const tool of tools.values()) {
     items.push({ kind: "tool", item: tool });
   }
+
+  // flush any remaining stall
+  stall.flush(items);
+
+  // sort
   const sorted = items.sort((left, right) => ("item" in left ? left.item.seq : left.seq) - ("item" in right ? right.item.seq : right.seq));
-  // Pair each human.requested with the NEXT human.resolved (handoff card) or,
-  // when the run ended first, the next human.cancelled (cancelled card with the
-  // question, no answer). Interleaved events (turns/tools/models) never break
-  // the pairing, so checkpoints render inline like tool calls.
-  const sortedHumanPaired: TimelineItem[] = [];
+  return { items: sorted, parentByLabel };
+}
+
+// ---------------------------------------------------------------------------
+// Transform 2: pairHuman
+// ---------------------------------------------------------------------------
+export function pairHuman(sorted: TimelineItem[]): TimelineItem[] {
+  const paired: TimelineItem[] = [];
   const pairedIndexes = new Set<number>();
   for (let index = 0; index < sorted.length; index += 1) {
     const item = sorted[index];
@@ -399,7 +434,7 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
         pairedIndexes.add(index);
         pairedIndexes.add(resolvedIndex);
         if (item.kind === "human") {
-          sortedHumanPaired.push({
+          paired.push({
             ...item,
             sub: resolved.sub === "resolved" ? "handoff" : "cancelled",
             question: item.detail,
@@ -407,9 +442,9 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
             resolvedAt: resolved.sub === "resolved" ? resolved.occurredAt : undefined,
           });
         } else {
-          sortedHumanPaired.push({
+          paired.push({
             ...item,
-            sub: resolved.sub, // "approved" | "rejected"
+            sub: resolved.sub,
             decision: resolved.sub,
             decidedAt: resolved.occurredAt,
           });
@@ -417,8 +452,15 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
         continue;
       }
     }
-    if (!pairedIndexes.has(index)) sortedHumanPaired.push(item);
+    if (!pairedIndexes.has(index)) paired.push(item);
   }
+  return paired;
+}
+
+// ---------------------------------------------------------------------------
+// Transform 3: clusterModels
+// ---------------------------------------------------------------------------
+export function clusterModels(items: TimelineItem[]): TimelineItem[] {
   const merged: TimelineItem[] = [];
   let pending: Array<TimelineItem & { kind: "model" }> = [];
   const flush = () => {
@@ -443,7 +485,7 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
     }
     pending = [];
   };
-  for (const item of sortedHumanPaired) {
+  for (const item of items) {
     if (item.kind === "model") {
       pending.push(item);
       continue;
@@ -452,7 +494,13 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
     merged.push(item);
   }
   flush();
+  return merged;
+}
 
+// ---------------------------------------------------------------------------
+// Transform 4: segmentAgents
+// ---------------------------------------------------------------------------
+export function segmentAgents(items: TimelineItem[], parentByLabel: Map<string, string | undefined>): TimelineItem[] {
   type AgentSegment = {
     agent: string;
     parent: string | undefined;
@@ -517,7 +565,7 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
     };
     return seg;
   };
-  for (const item of merged) {
+  for (const item of items) {
     if (item.kind === "agent") {
       if (item.status === "started") {
         if (seg && seg.agent !== item.agent) flushSegment();
@@ -565,6 +613,7 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
   }
   flushSegment();
 
+  // Merge consecutive non-parallel runs of same agent
   const runsByAgent = new Map<string, TimelineItem & { kind: "agent-segment" }>();
   const runsList = new Map<string, AgentRun[]>();
   for (const item of grouped) {
@@ -577,19 +626,16 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
     }
   }
 
-  const finalItems: TimelineItem[] = [];
+  const final: TimelineItem[] = [];
   const emitted = new Set<string>();
   for (const item of grouped) {
     if (item.kind !== "agent-segment") {
-      finalItems.push(item);
+      final.push(item);
       continue;
     }
     if (emitted.has(item.agent)) continue;
     emitted.add(item.agent);
     const runs = runsList.get(item.agent)!;
-    // Merge consecutive non-parallel runs of the same agent into a single run
-    // so the coordinator spine (orchestrator) stays one row even when subagent
-    // delegations interrupt its turn stream between LLM calls.
     const mergedRuns: AgentRun[] = [];
     for (const run of runs) {
       const prev = mergedRuns[mergedRuns.length - 1];
@@ -603,9 +649,9 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
     }
     if (mergedRuns.length <= 1) {
       if (mergedRuns.length === 1) {
-        finalItems.push({ ...item, runs: mergedRuns, items: mergedRuns[0].items });
+        final.push({ ...item, runs: mergedRuns, items: mergedRuns[0].items });
       } else {
-        finalItems.push(item);
+        final.push(item);
       }
       continue;
     }
@@ -616,7 +662,7 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
       : mergedRuns.some((run) => run.status === "failed")
         ? "failed"
         : "completed";
-    finalItems.push({
+    final.push({
       ...first,
       status,
       parallel: mergedRuns.some((run) => run.parallel),
@@ -627,11 +673,15 @@ export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
     });
   }
 
-  return nestSegments(finalItems);
+  return final;
 }
 
+// ---------------------------------------------------------------------------
+// Transform 5: nestSegments (kept as named export)
+// ---------------------------------------------------------------------------
+
 /** Attach subagent segments inside their parent segment so the coordinator spine stays the top level. */
-function nestSegments(items: TimelineItem[]): TimelineItem[] {
+export function nestSegments(items: TimelineItem[]): TimelineItem[] {
   const byAgent = new Map<string, AgentSegmentItem>();
   for (const item of items) {
     if (item.kind === "agent-segment") byAgent.set(item.agent, item);
@@ -661,4 +711,15 @@ function nestSegments(items: TimelineItem[]): TimelineItem[] {
     result.push(item);
   }
   return result;
+}
+
+// ---------------------------------------------------------------------------
+// Thin orchestrator
+// ---------------------------------------------------------------------------
+export function buildTimeline(events: ActivityEvent[]): TimelineItem[] {
+  const { items: raw, parentByLabel } = parseRaw(events);
+  const paired = pairHuman(raw);
+  const clustered = clusterModels(paired);
+  const segmented = segmentAgents(clustered, parentByLabel);
+  return nestSegments(segmented);
 }

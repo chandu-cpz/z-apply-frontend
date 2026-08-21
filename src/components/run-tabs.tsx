@@ -1,5 +1,7 @@
 import { PanelLeftClose, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { hostnameOf } from "@/lib/format";
+import { getRunStatusMeta } from "@/lib/run-status";
 import type { Run } from "../types";
 
 interface Props { runs: Run[]; selected?: string; onSelect: (run: Run) => void; onNew: () => void; onCollapse(): void; }
@@ -25,9 +27,9 @@ export function RunRail({ runs, selected, onSelect, onNew, onCollapse }: Props) 
           onClick={() => onSelect(run)}
           key={run.id}
         >
-          <span className={cn("size-1.5 shrink-0 rounded-full", statusColor(run.status))} />
+          <span className={cn("size-1.5 shrink-0 rounded-full", getRunStatusMeta(run).dot)} />
           <span className="grid min-w-0 gap-0.5">
-            <b className="truncate text-[13px] font-medium">{run.company || hostname(run.job_url)}</b>
+            <b className="truncate text-[13px] font-medium">{run.company || hostnameOf(run.job_url, "New application")}</b>
             <small className="truncate text-xs text-muted-foreground">{run.role || run.phase.replaceAll("_", " ")}</small>
           </span>
           {run.status === "waiting_human" && <span className="ml-auto grid size-4 place-items-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-950">!</span>}
@@ -41,10 +43,5 @@ export function RunRail({ runs, selected, onSelect, onNew, onCollapse }: Props) 
   </nav>;
 }
 
-function statusColor(status: Run["status"]): string {
-  if (status === "running" || status === "starting") return "bg-cyan-400";
-  if (status === "waiting_human") return "bg-amber-400 shadow-sm shadow-amber-300";
-  return "bg-zinc-400";
-}
 
-function hostname(url: string): string { try { return new URL(url).hostname.replace("www.", ""); } catch { return "New application"; } }
+

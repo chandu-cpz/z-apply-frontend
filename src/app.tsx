@@ -4,7 +4,8 @@ import { Archive, Bot, BriefcaseBusiness, Command, Gauge, History, Monitor, Moon
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { api } from "./api";
-import { runAttentionLabel } from "./lib/format";
+import { hostnameOf, runAttentionLabel } from "./lib/format";
+import { getRunStatusMeta } from "./lib/run-status";
 import { AgentConversation } from "./components/agent-conversation";
 import { AgentsDrawer } from "./components/agents-drawer";
 import { BrowserPanel } from "./components/browser-panel";
@@ -128,35 +129,14 @@ function Header({ active, route, streamStatus, navigate }: { active?: Run; route
 
 /** The active run as one compact chip — no clock, no phase micro-labels. */
 function ActiveRunChip({ run }: { run: Run }) {
-  const submitted = run.outcome === "submitted_verified";
-  const failed = run.status === "terminal" && !submitted && run.outcome !== "cancelled";
-  const waiting = run.status === "waiting_human" || run.status === "human_control";
-  const running = run.status === "running" || run.status === "starting";
-  const dot = submitted
-    ? "bg-emerald-400"
-    : failed
-      ? "bg-rose-400"
-      : waiting
-        ? "bg-amber-400 animate-pulse"
-        : running
-          ? "bg-violet-500 animate-pulse"
-          : "bg-zinc-400";
-  const label = waiting ? "needs you" : submitted ? "submitted" : failed ? "failed" : running ? "running" : "finished";
+  const meta = getRunStatusMeta(run);
   return (
     <span className="hidden max-w-64 min-w-0 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 lg:flex dark:border-zinc-800 dark:bg-zinc-900">
-      <span className={`size-1.5 shrink-0 rounded-full ${dot}`} />
-      <span className="truncate text-[11.5px] font-medium text-zinc-700 dark:text-zinc-300">{run.company || hostname(run.job_url)}</span>
-      <span className="shrink-0 text-[10.5px] text-zinc-400 dark:text-zinc-500">{label}</span>
+      <span className={`size-1.5 shrink-0 rounded-full ${meta.dot}`} />
+      <span className="truncate text-[11.5px] font-medium text-zinc-700 dark:text-zinc-300">{run.company || hostnameOf(run.job_url)}</span>
+      <span className="shrink-0 text-[10.5px] text-zinc-400 dark:text-zinc-500">{meta.label}</span>
     </span>
   );
-}
-
-function hostname(url: string): string {
-  try {
-    return new URL(url).hostname.replace("www.", "");
-  } catch {
-    return "Application";
-  }
 }
 
 function NavButton({ active, label, icon, onClick }: { active: boolean; label: string; icon: React.ReactNode; onClick(): void }) {

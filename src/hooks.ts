@@ -22,30 +22,65 @@ export const STREAM_EVENT_TYPES = [
 
 export type StreamStatus = "connecting" | "connected" | "reconnecting";
 
-export function useEventStream(): StreamStatus {
-  const client = useQueryClient();
+function useNamedEventSource(
+  url: string,
+  types: readonly string[],
+  receive: (msg: MessageEvent<string>) => void,
+): StreamStatus {
   const [status, setStatus] = useState<StreamStatus>("connecting");
-  const cursor = useRef(0);
+  // Latest-ref pattern: callers pass inline closures, so `receive` changes
+  // identity every render. The connection effect must not depend on it or
+  // every parent render would tear down and reopen the EventSource.
+  const receiveRef = useRef(receive);
   useEffect(() => {
-    const stored = Number.parseInt(localStorage.getItem(CURSOR_KEY) ?? "0", 10);
-    cursor.current = Number.isSafeInteger(stored) && stored > 0 ? stored : 0;
-    const source = new EventSource(`/api/v1/events/stream?after=${cursor.current}`);
+    receiveRef.current = receive;
+  });
+  useEffect(() => {
+    const source = new EventSource(url);
+    const dispatch = (msg: Event) => receiveRef.current(msg as MessageEvent<string>);
     source.onopen = () => setStatus("connected");
     source.onerror = () => setStatus("reconnecting");
-    const receive = (message: MessageEvent<string>) => {
-      const event = parseStreamEvent(message.data);
-      if (!event) return;
-      applyEvent(client, event);
-      cursor.current = Math.max(cursor.current, event.database_id);
-      localStorage.setItem(CURSOR_KEY, String(cursor.current));
-    };
-    source.onmessage = receive;
-    for (const type of STREAM_EVENT_TYPES) {
-      source.addEventListener(type, (message) => receive(message as MessageEvent<string>));
+    source.onmessage = dispatch;
+    for (const type of types) {
+      source.addEventListener(type, dispatch);
     }
     return () => source.close();
-  }, [client]);
+  }, [url, types]);
   return status;
+}
+
+export function useEventStream(): StreamStatus {
+  const client = useQueryClient();
+  // Seed the cursor from localStorage exactly once; re-seeding on every render
+  // could roll the in-memory cursor back to a stale stored value while a
+  // throttled flush is still pending.
+  const cursor = useRef(-1);
+  if (cursor.current < 0) {
+    const stored = Number.parseInt(localStorage.getItem(CURSOR_KEY) ?? "0", 10);
+    cursor.current = Number.isSafeInteger(stored) && stored > 0 ? stored : 0;
+  }
+  // Throttle localStorage writes to avoid per-event main-thread churn and cross-tab clobber
+  const flushTimer = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (flushTimer.current !== null) window.clearTimeout(flushTimer.current);
+    },
+    [],
+  );
+  const scheduleFlush = (id: number) => {
+    cursor.current = Math.max(cursor.current, id);
+    if (flushTimer.current !== null) return;
+    flushTimer.current = window.setTimeout(() => {
+      flushTimer.current = null;
+      localStorage.setItem(CURSOR_KEY, String(cursor.current));
+    }, 500);
+  };
+  return useNamedEventSource(`/api/v1/events/stream?after=${cursor.current}`, STREAM_EVENT_TYPES, (message) => {
+    const event = parseStreamEvent(message.data);
+    if (!event) return;
+    applyEvent(client, event);
+    scheduleFlush(event.database_id);
+  });
 }
 
 export function parseStreamEvent(data: string): ActivityEvent | undefined {
@@ -111,21 +146,9 @@ export function parseLiveEvent(data: string): LiveActivityEvent | undefined {
 const LIVE_STREAM_EVENT_TYPES = ["agent.message.delta", "model.tool_call.delta"] as const;
 
 export function useLiveEventStream(): StreamStatus {
-  const [status, setStatus] = useState<StreamStatus>("connecting");
-  useEffect(() => {
-    const source = new EventSource("/api/v1/events/live");
-    const receive = (message: MessageEvent<string>) => {
-      const event = parseLiveEvent(message.data);
-      if (!event) return;
-      useLiveStore.getState().push(event);
-    };
-    source.onopen = () => setStatus("connected");
-    source.onerror = () => setStatus("reconnecting");
-    source.onmessage = receive;
-    for (const type of LIVE_STREAM_EVENT_TYPES) {
-      source.addEventListener(type, receive);
-    }
-    return () => source.close();
-  }, []);
-  return status;
+  return useNamedEventSource("/api/v1/events/live", LIVE_STREAM_EVENT_TYPES, (message) => {
+    const event = parseLiveEvent(message.data);
+    if (!event) return;
+    useLiveStore.getState().push(event);
+  });
 }
