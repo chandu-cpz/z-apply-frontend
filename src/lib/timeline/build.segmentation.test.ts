@@ -321,7 +321,7 @@ describe("buildTimeline human pairing", () => {
         request_id: "req-9",
         context: "Final review…",
       }),
-      ev(2, "submission.approved", "core", { responder: "web" }),
+      ev(2, "submission.approved", "core", { responder: "web", request_id: "req-9" }),
     ];
     const items = buildTimeline(events);
     const submissions = items.filter((item) => item.kind === "submission") as Array<Extract<TimelineItem, { kind: "submission" }>>;

@@ -328,9 +328,11 @@ function parseRaw(events: ActivityEvent[]): { items: TimelineItem[]; parentByLab
         sub,
         detail: detail.slice(0, 200),
         occurredAt,
+        // Resolution payloads also carry request_id; pairHuman matches on it
+        // so concurrent requests can never cross-pair by list order.
+        request_id: str(payload.request_id) || undefined,
         ...(type === "human.requested"
           ? {
-              request_id: str(payload.request_id),
               options: Array.isArray(payload.options) ? payload.options.map(String) : [],
               allow_free_text: Boolean(payload.allow_free_text),
             }
@@ -357,7 +359,7 @@ function parseRaw(events: ActivityEvent[]): { items: TimelineItem[]; parentByLab
         continue;
       }
       const detail = sub === "approved" || sub === "rejected" ? `by ${str(payload.responder)}` : eventDetail(event);
-      items.push({ kind: "submission", seq, sub, detail: detail.slice(0, 200), occurredAt });
+      items.push({ kind: "submission", seq, sub, detail: detail.slice(0, 200), occurredAt, request_id: str(payload.request_id) || undefined });
       continue;
     }
 
@@ -414,10 +416,18 @@ export function pairHuman(sorted: TimelineItem[]): TimelineItem[] {
     if (isRequest && !pairedIndexes.has(index)) {
       const resolutionSubs =
         item.kind === "human" ? new Set(["resolved", "cancelled"]) : new Set(["approved", "rejected"]);
+      const requestId = item.request_id;
       let resolvedIndex = index + 1;
       while (resolvedIndex < sorted.length) {
         const candidate = sorted[resolvedIndex];
-        if (candidate.kind === item.kind && resolutionSubs.has(candidate.sub)) break;
+        // Match on the backend's request_id first so concurrent requests
+        // cannot cross-pair; id-less candidates fall back to kind order
+        // (defensive, e.g. hand-built fixtures).
+        if (
+          candidate.kind === item.kind &&
+          resolutionSubs.has(candidate.sub) &&
+          (!requestId || !candidate.request_id || candidate.request_id === requestId)
+        ) break;
         resolvedIndex += 1;
       }
       if (resolvedIndex < sorted.length) {
