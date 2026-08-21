@@ -43,19 +43,10 @@ const BROWSER_SUBS: Record<string, string> = {
   "browser.page_opened": "Page opened",
   "browser.page_focused": "Page focused",
   "browser.page_closed": "Page closed",
-  "browser.page_lost": "Page lost",
-  "browser.opened": "Workspace opened",
   "browser.closed": "Workspace closed",
-  "browser.focused": "Focused",
   "browser.control_taken": "Human control taken",
   "browser.control_returned": "Control returned to agent",
   "browser.snapshot_refreshed": "Fresh evidence captured",
-  "browser.action.started": "Browser action started",
-  "browser.action.completed": "Browser action completed",
-  "browser.action.failed": "Browser action failed",
-  "browser.action_started": "Browser action started",
-  "browser.action_completed": "Browser action completed",
-  "browser.action_failed": "Browser action failed",
 };
 
 const RUN_SUBS: Record<string, string> = {
@@ -63,8 +54,8 @@ const RUN_SUBS: Record<string, string> = {
   "run.started": "Started",
   "run.phase_changed": "Phase changed",
   "run.cancel_requested": "Cancel requested",
-  "run.cancelled": "Cancelled",
   "run.terminal": "Finished",
+  "run.ledger": "Call ledger saved",
   "run.interrupted": "Interrupted",
   "run.start_failed": "Start failed",
 };
@@ -193,7 +184,7 @@ function parseRaw(events: ActivityEvent[]): { items: TimelineItem[]; parentByLab
       continue;
     }
 
-    if (type === "model.rotated" || type === "model.rate_limited" || type === "model.retrying" || type === "model.failed") {
+    if (type === "model.rotated" || type === "model.rate_limited" || type === "model.failed") {
       const model = str(payload.model_id) || str(payload.model) || runModel;
       const routingAgent = str(payload.role) || str(payload.agent_path) || agent;
       items.push({ kind: "model", seq, sub: type.replace("model.", ""), agent: routingAgent, model: humanModel(model), detail: eventDetail(event), occurredAt });
@@ -308,7 +299,7 @@ function parseRaw(events: ActivityEvent[]): { items: TimelineItem[]; parentByLab
       continue;
     }
 
-    if (type === "recovery.started" || type === "recovery.completed" || type === "recovery.exhausted" || type === "recovery.progress_reset" || type === "recovery.failed") {
+    if (type === "recovery.started" || type === "recovery.completed" || type === "recovery.exhausted") {
       items.push({
         kind: "recovery",
         seq,
@@ -391,8 +382,8 @@ function parseRaw(events: ActivityEvent[]): { items: TimelineItem[]; parentByLab
       continue;
     }
 
-    if (type === "warning" || type === "error" || event.level === "warning" || event.level === "error") {
-      items.push({ kind: "notice", seq, level: event.level === "error" || type === "error" ? "error" : "warning", message: textOf(payload, 400), occurredAt });
+    if (event.level === "warning" || event.level === "error") {
+      items.push({ kind: "notice", seq, level: event.level, message: textOf(payload, 400), occurredAt });
       continue;
     }
   }
@@ -477,7 +468,6 @@ export function clusterModels(items: TimelineItem[]): TimelineItem[] {
         selected: pending.filter((entry) => entry.sub === "selected").length,
         failed: pending.filter((entry) => entry.sub === "failed").length,
         rotated: pending.filter((entry) => entry.sub === "rotated").length,
-        retrying: pending.filter((entry) => entry.sub === "retrying").length,
         rateLimited: pending.filter((entry) => entry.sub === "rate_limited").length,
         lastModel: last.model,
         lastSub: last.sub,

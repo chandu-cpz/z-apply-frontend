@@ -52,7 +52,6 @@ export interface ModelClusterItem {
   selected: number;
   failed: number;
   rotated: number;
-  retrying: number;
   rateLimited: number;
   lastModel: string;
   lastSub: string;
@@ -79,7 +78,7 @@ export type TimelineItem =
   | { kind: "agent-segment"; key: string; seq: number; agent: string; parent: string | undefined; depth: number; spawned: number; parallel: boolean; status: "running" | "completed" | "failed"; occurredAt: string; endedAt: string; items: TimelineItem[]; runs: AgentRun[] }
   | { kind: "agent"; seq: number; agent: string; status: "started" | "completed" | "failed"; detail: string; occurredAt: string }
   | { kind: "model"; seq: number; sub: string; agent: string; model: string; detail: string; occurredAt: string }
-  | { kind: "model-cluster"; seq: number; occurredAt: string; agent: string; entries: ModelEntry[]; selected: number; failed: number; rotated: number; retrying: number; rateLimited: number; lastModel: string; lastSub: string }
+  | { kind: "model-cluster"; seq: number; occurredAt: string; agent: string; entries: ModelEntry[]; selected: number; failed: number; rotated: number; rateLimited: number; lastModel: string; lastSub: string }
   | { kind: "browser"; seq: number; sub: string; detail: string; occurredAt: string }
   | { kind: "recovery"; seq: number; attempt: number; errorType: string; detail: string; stage: string; occurredAt: string }
   | { kind: "human"; seq: number; sub: string; detail: string; occurredAt: string; question?: string; answer?: string; resolvedAt?: string; request_id?: string; options?: string[]; allow_free_text?: boolean }

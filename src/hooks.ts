@@ -2,22 +2,27 @@ import { useEffect, useRef, useState } from "react";
 import { type QueryClient, useQueryClient } from "@tanstack/react-query";
 import { activityEventSchema, liveActivityEventSchema } from "./schemas";
 import { useLiveStore } from "./live-store";
+import { useSyncStore } from "./sync-store";
 import type { ActivityEvent, LiveActivityEvent } from "./types";
 
 const CURSOR_KEY = "z-apply:event-cursor";
 
-/** EventSource does not support wildcard named events, so this list is the wire contract. */
+/**
+ * EventSource does not support wildcard named events, so this list is the wire
+ * contract: every persisted event type the core emits (mirrors
+ * z_apply_core.integrations.service._emit plus the backend-synthesized
+ * run.interrupted/run.start_failed). Live-only deltas ride /events/live via
+ * useLiveEventStream instead; model.call_started carries no renderable state.
+ */
 export const STREAM_EVENT_TYPES = [
-  "run.queued", "run.started", "run.phase_changed", "run.status_changed", "run.cancel_requested", "run.terminal", "run.interrupted",
-  "run.start_failed", "agent.started", "agent.changed", "agent.completed", "agent.turn.completed", "agent.failed", "agent.message.delta",
-  "model.selected", "model.usage", "model.failed", "model.retrying", "model.rate_limited", "model.rotated", "model.tool_call.delta",
-  "tool.started", "tool.progress", "tool.completed", "tool.failed", "tool.denied",
-  "browser.opened", "browser.focused", "browser.action_started", "browser.action_completed", "browser.action_failed",
-  "browser.page_opened", "browser.page_focused", "browser.page_closed", "browser.snapshot_refreshed",
-  "browser.control_taken", "browser.control_returned", "browser.closed", "browser.page_lost",
+  "run.queued", "run.started", "run.phase_changed", "run.cancel_requested", "run.terminal", "run.interrupted", "run.start_failed", "run.ledger",
+  "agent.started", "agent.changed", "agent.completed", "agent.failed", "agent.turn.completed",
+  "model.selected", "model.switched", "model.usage", "model.failed", "model.rate_limited", "model.rotated", "model.call.metrics", "model.call_completed",
+  "tool.started", "tool.progress", "tool.completed", "tool.failed",
+  "browser.page_opened", "browser.page_focused", "browser.page_closed", "browser.snapshot_refreshed", "browser.control_taken", "browser.control_returned", "browser.closed",
   "human.requested", "human.resolved", "human.cancelled",
-  "submission.review_ready", "submission.review_not_ready", "submission.approval_requested", "submission.approved", "submission.rejected", "submission.started", "submission.verified",
-  "artifact.created", "authentication.evidence", "graph.event", "recovery.started", "recovery.completed", "recovery.failed", "recovery.exhausted", "context.received", "warning", "error",
+  "submission.review_ready", "submission.review_not_ready", "submission.approval_requested", "submission.approved", "submission.rejected",
+  "artifact.created", "authentication.evidence", "graph.event", "recovery.started", "recovery.completed", "recovery.exhausted", "context.received", "reasoning.updated",
 ] as const;
 
 export type StreamStatus = "connecting" | "connected" | "reconnecting";
@@ -26,19 +31,25 @@ function useNamedEventSource(
   url: string,
   types: readonly string[],
   receive: (msg: MessageEvent<string>) => void,
+  onOpen?: () => void,
 ): StreamStatus {
   const [status, setStatus] = useState<StreamStatus>("connecting");
   // Latest-ref pattern: callers pass inline closures, so `receive` changes
   // identity every render. The connection effect must not depend on it or
   // every parent render would tear down and reopen the EventSource.
   const receiveRef = useRef(receive);
+  const openRef = useRef(onOpen);
   useEffect(() => {
     receiveRef.current = receive;
+    openRef.current = onOpen;
   });
   useEffect(() => {
     const source = new EventSource(url);
     const dispatch = (msg: Event) => receiveRef.current(msg as MessageEvent<string>);
-    source.onopen = () => setStatus("connected");
+    source.onopen = () => {
+      setStatus("connected");
+      openRef.current?.();
+    };
     source.onerror = () => setStatus("reconnecting");
     source.onmessage = dispatch;
     for (const type of types) {
@@ -51,16 +62,18 @@ function useNamedEventSource(
 
 export function useEventStream(): StreamStatus {
   const client = useQueryClient();
-  // Seed the cursor from localStorage exactly once; re-seeding on every render
-  // could roll the in-memory cursor back to a stale stored value while a
-  // throttled flush is still pending.
-  const cursor = useRef(-1);
-  if (cursor.current < 0) {
+  // Seed the stream start cursor from localStorage exactly once. Read during
+  // render via a lazy state initializer (never a ref: refs may only be
+  // touched from handlers/effects); re-seeding on later renders could roll
+  // the in-memory cursor back while a throttled flush is still pending.
+  const [initialCursor] = useState(() => {
     const stored = Number.parseInt(localStorage.getItem(CURSOR_KEY) ?? "0", 10);
-    cursor.current = Number.isSafeInteger(stored) && stored > 0 ? stored : 0;
-  }
+    return Number.isSafeInteger(stored) && stored > 0 ? stored : 0;
+  });
+  const cursor = useRef(initialCursor);
   // Throttle localStorage writes to avoid per-event main-thread churn and cross-tab clobber
   const flushTimer = useRef<number | null>(null);
+  const hasConnected = useRef(false);
   useEffect(
     () => () => {
       if (flushTimer.current !== null) window.clearTimeout(flushTimer.current);
@@ -75,12 +88,27 @@ export function useEventStream(): StreamStatus {
       localStorage.setItem(CURSOR_KEY, String(cursor.current));
     }, 500);
   };
-  return useNamedEventSource(`/api/v1/events/stream?after=${cursor.current}`, STREAM_EVENT_TYPES, (message) => {
-    const event = parseStreamEvent(message.data);
-    if (!event) return;
-    applyEvent(client, event);
-    scheduleFlush(event.database_id);
-  });
+  return useNamedEventSource(
+    `/api/v1/events/stream?after=${initialCursor}`,
+    STREAM_EVENT_TYPES,
+    (message) => {
+      const event = parseStreamEvent(message.data);
+      if (!event) return;
+      applyEvent(client, event);
+      scheduleFlush(event.database_id);
+    },
+    () => {
+      // Reconnect reconciliation: the server replays from Last-Event-ID and
+      // store patches converge local state; one runs refetch covers any
+      // residual drift (e.g. silent server-side mutations). Skipped on the
+      // initial connect, where bootstrap queries just fetched.
+      if (!hasConnected.current) {
+        hasConnected.current = true;
+        return;
+      }
+      void client.invalidateQueries({ queryKey: ["runs"] });
+    },
+  );
 }
 
 export function parseStreamEvent(data: string): ActivityEvent | undefined {
@@ -114,18 +142,19 @@ export function applyEvent(client: QueryClient, event: ActivityEvent): void {
     }
     return [...current, event];
   });
-  if (event.type.startsWith("run.") || event.type.startsWith("browser.")) {
-    void client.invalidateQueries({ queryKey: ["runs"] });
-    void client.invalidateQueries({ queryKey: ["run", event.run_id] });
+  // State patches flow through the sync store; no invalidate-and-refetch.
+  useSyncStore.getState().applyEvent(event);
+  // The live view is fetched data (VNC target), not run state: refetch it when
+  // the browser topology changes. Every browser event except
+  // snapshot_refreshed (excerpt-only) is a topology change, and all are rare.
+  if (event.type.startsWith("browser.") && event.type !== "browser.snapshot_refreshed") {
+    void client.invalidateQueries({ queryKey: ["live"] });
   }
-  if (event.type === "model.selected" || event.type === "model.rotated") {
-    void client.invalidateQueries({ queryKey: ["run", event.run_id] });
+  // run.ledger lands once per run with the final call totals; one refetch
+  // makes RunStats/CallsDrawer show them without polling a terminal run.
+  if (event.type === "run.ledger") {
+    void client.invalidateQueries({ queryKey: ["calls", event.run_id] });
   }
-  if (event.type.startsWith("human.") || event.type.startsWith("submission.")) {
-    void client.invalidateQueries({ queryKey: ["human", event.run_id] });
-  }
-  if (event.type === "artifact.created") void client.invalidateQueries({ queryKey: ["artifacts", event.run_id] });
-  if (event.type.startsWith("browser.")) void client.invalidateQueries({ queryKey: ["live"] });
 }
 
 export function parseLiveEvent(data: string): LiveActivityEvent | undefined {

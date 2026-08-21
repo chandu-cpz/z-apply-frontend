@@ -192,7 +192,7 @@ export function ActivityGroup({ group }: { group: Extract<ChatRow, { kind: "acti
  * the model is already shown in the message header, so no "selected" verb spam. */
 export function ModelClusterRowCard({ item }: { item: ModelClusterItem }) {
   const [open, setOpen] = useState(false);
-  const unsettled = item.failed + item.retrying + item.rateLimited;
+  const unsettled = item.failed + item.rateLimited;
   const label = item.lastModel ? `Model ${humanModel(item.lastModel)}` : "Model";
   return (
     <div className="mb-1">
@@ -214,7 +214,7 @@ export function ModelClusterRowCard({ item }: { item: ModelClusterItem }) {
 }
 
 function ModelLine({ entry }: { entry: ModelEntry }) {
-  const unsettled = entry.sub === "failed" || entry.sub === "rate_limited" || entry.sub === "retrying";
+  const unsettled = entry.sub === "failed" || entry.sub === "rate_limited";
   const tone = unsettled ? "text-amber-500" : entry.sub === "rotated" ? "text-blue-500" : "text-zinc-500 dark:text-zinc-400";
   return (
     <div className="ml-5 flex items-baseline gap-2 py-0.5">

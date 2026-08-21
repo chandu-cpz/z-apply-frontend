@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { api } from "./api";
 import { hostnameOf, runAttentionLabel } from "./lib/format";
 import { getRunStatusMeta } from "./lib/run-status";
+import { runSchema } from "./schemas";
+import { useRun, useRuns, useSyncStore } from "./sync-store";
 import { AgentConversation } from "./components/agent-conversation";
 import { AgentsDrawer } from "./components/agents-drawer";
 import { BrowserPanel } from "./components/browser-panel";
@@ -22,16 +24,28 @@ import type { Run } from "./types";
 import { useUiStore } from "./ui-store";
 
 export function App() {
-  const query = useQueryClient();
   const [route, navigate] = useRoute();
   const theme = useUiStore((state) => state.theme);
   const streamStatus = useEventStream();
   useLiveEventStream();
-  const runs = useQuery({ queryKey: ["runs"], queryFn: api.runs, refetchInterval: 5_000 });
+  // Bootstrap only: the SSE stream owns run state from here on (sync store).
+  const runsQuery = useQuery({ queryKey: ["runs"], queryFn: api.runs, staleTime: Infinity });
+  const runs = useRuns();
+  useEffect(() => {
+    if (runsQuery.data) useSyncStore.getState().seedRuns(runsQuery.data);
+  }, [runsQuery.data]);
   const notifiedRuns = useRef(new Set<string>());
   const routeRunId = route.name === "run" ? route.runId : "";
-  const detail = useQuery({ queryKey: ["run", routeRunId], queryFn: () => api.run(routeRunId), enabled: Boolean(routeRunId) });
-  const selected = detail.data ?? runs.data?.find((run) => run.id === routeRunId);
+  const detail = useQuery({
+    queryKey: ["run", routeRunId],
+    queryFn: () => api.run(routeRunId),
+    enabled: Boolean(routeRunId),
+    staleTime: Infinity,
+  });
+  useEffect(() => {
+    if (detail.data) useSyncStore.getState().seedRun(detail.data);
+  }, [detail.data]);
+  const selected = useRun(routeRunId);
   const create = useMutation({
     mutationFn: ({
       url,
@@ -45,7 +59,7 @@ export function App() {
       model?: string;
     }) => api.createRun(url, task, provider, model),
     onSuccess: (run) => {
-      query.setQueryData<Run[]>(["runs"], (old = []) => [run, ...old.filter((item) => item.id !== run.id)]);
+      useSyncStore.getState().seedRun(run);
       navigate({ name: "run", runId: run.id });
       toast.success("Application queued", { description: "Core now owns the run and will stream verified activity." });
     },
@@ -58,7 +72,7 @@ export function App() {
     // dismissed; clicking "Open run" jumps to that run's chat where the
     // question/approval can be answered inline.
     const waiting = new Set(
-      (runs.data ?? [])
+      runs
         .filter((run) => run.status === "waiting_human" || run.status === "human_control")
         .map((run) => run.id),
     );
@@ -68,7 +82,7 @@ export function App() {
         notifiedRuns.current.delete(runId);
       }
     }
-    for (const run of runs.data ?? []) {
+    for (const run of runs) {
       if (run.status !== "waiting_human" && run.status !== "human_control") continue;
       if (notifiedRuns.current.has(run.id)) continue;
       notifiedRuns.current.add(run.id);
@@ -82,16 +96,16 @@ export function App() {
         },
       });
     }
-  }, [navigate, runs.data]);
+  }, [navigate, runs]);
 
   return <div className={`${theme === "dark" ? "dark" : ""} min-h-screen bg-stone-100 font-sans text-stone-950 antialiased dark:bg-zinc-950 dark:text-zinc-100`}>
     <Header active={selected} route={route} streamStatus={streamStatus} navigate={navigate}/>
     {route.name === "new" && <StartRun onSubmit={(url, task, provider, model) => create.mutate({ url, task, provider, model })}/>}
-    {route.name === "history" && <HistoryScreen runs={runs.data ?? []} onOpen={(run) => navigate({ name: "run", runId: run.id })}/>}
-    {route.name === "artifacts" && <ArtifactsScreen runs={runs.data ?? []}/>}
+    {route.name === "history" && <HistoryScreen runs={runs} onOpen={(run) => navigate({ name: "run", runId: run.id })}/>}
+    {route.name === "artifacts" && <ArtifactsScreen runs={runs}/>}
     {route.name === "settings" && <SettingsScreen/>}
     {route.name === "diagnostics" && <DiagnosticsScreen/>}
-    {route.name === "run" && selected && <Cockpit run={selected} runs={runs.data ?? []} onNew={() => navigate({ name: "new" })} onSelect={(run) => navigate({ name: "run", runId: run.id })}/>}
+    {route.name === "run" && selected && <Cockpit run={selected} runs={runs} onNew={() => navigate({ name: "new" })} onSelect={(run) => navigate({ name: "run", runId: run.id })}/>}
     {route.name === "run" && detail.isLoading && <CenteredMessage>Loading application workspace…</CenteredMessage>}
     {route.name === "run" && detail.isError && <CenteredMessage>Run unavailable: {detail.error.message}</CenteredMessage>}
   </div>;
@@ -162,8 +176,15 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
   const [subagentsOpen, setSubagentsOpen] = useState(false);
   const desktop = useDesktopWorkspace();
   const layout = useDefaultLayout({ id: "z-apply-workspace-v4", storage: localStorage });
-  const events = useQuery({ queryKey: ["events", run.id], queryFn: () => api.events(run.id), refetchInterval: 5_000 });
-  const refresh = () => { void query.invalidateQueries({ queryKey: ["runs"] }); void query.invalidateQueries({ queryKey: ["run", run.id] }); void query.invalidateQueries({ queryKey: ["live"] }); };
+  const events = useQuery({
+    queryKey: ["events", run.id],
+    queryFn: () => api.events(run.id),
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+  });
+  // Run state arrives via the sync store; the live view is fetched data
+  // (VNC target) refetched when browser topology events invalidate it.
+  const refresh = () => { void query.invalidateQueries({ queryKey: ["live"] }); };
 
   // The live view (VNC) is only needed while the browser panel is actually
   // on screen: pause polling when the tab is hidden or the browser tab is not
@@ -174,20 +195,30 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
     queryKey: ["live"],
     queryFn: api.liveView,
     enabled: browserShown,
-    refetchInterval: browserShown ? 2_000 : false,
   });
 
   // Opening a run page (URL, history, or rail) focuses its live browser so
   // the panel always shows the run being viewed. Any run with an open browser
-  // (running OR terminal-retained) can be focused.
+  // (running OR terminal-retained) can be focused. Terminal runs are skipped:
+  // a stale "open" tab state on an interrupted run would 404 against core.
   useEffect(() => {
-    if (run.browser_tab_state === "open" && pageVisible) {
+    if (run.status !== "terminal" && run.browser_tab_state === "open" && pageVisible) {
       void api.focus(run.id).catch(() => undefined);
       void query.invalidateQueries({ queryKey: ["live"] });
     }
-  }, [run.id, run.browser_tab_state, pageVisible]);
+  }, [run.id, run.status, run.browser_tab_state, pageVisible, query]);
 
-  const action = useMutation({ mutationFn: async (operation: () => Promise<unknown>) => operation(), onSuccess: refresh, onError: (error) => toast.error("Action could not be completed", { description: error.message }) });
+  const action = useMutation({
+    mutationFn: async (operation: () => Promise<unknown>) => operation(),
+    onSuccess: (result) => {
+      // Command responses carry the mutated run: seed the store so the UI
+      // reflects the action immediately; the stream confirms from there.
+      const parsed = runSchema.safeParse(result);
+      if (parsed.success) useSyncStore.getState().seedRun(parsed.data);
+      refresh();
+    },
+    onError: (error) => toast.error("Action could not be completed", { description: error.message }),
+  });
   const humanControl = live.data?.control_mode === "human_control" && live.data.focused_run_id === run.id;
   const openRun = (nextRun: Run) => { onSelect(nextRun); if (nextRun.status !== "terminal") action.mutate(() => api.focus(nextRun.id)); };
   const takeControl = () => action.mutate(() => api.takeControl(run.id));

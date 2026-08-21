@@ -1,7 +1,8 @@
 import { Ban, BriefcaseBusiness, CheckCircle2, ExternalLink, PanelRight, ReceiptText, Sparkles, Timer, XCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api";
+import { useArtifacts, useSyncStore } from "../sync-store";
 import type { Artifact, Run } from "../types";
 import { hostnameOf } from "../lib/format";
 import { getRunStatusMeta } from "../lib/run-status";
@@ -42,7 +43,7 @@ export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCan
         </p>
       </div>
 
-      <RunStats runId={run.id} />
+      <RunStats runId={run.id} active={run.status !== "terminal"} />
 
       <div className="px-1">
         <p className="text-[11px] font-medium text-muted-foreground">Current activity</p>
@@ -75,12 +76,18 @@ export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCan
 }
 
 function SubmissionSuccess({ run }: { run: Run }) {
-  const { data: artifacts } = useQuery({
+  // Bootstrap once; live updates arrive via artifact.created events through
+  // the sync store.
+  const artifactsQuery = useQuery({
     queryKey: ["run-artifacts", run.id],
     queryFn: () => api.artifacts(run.id),
     enabled: run.outcome === "submitted_verified",
-    refetchInterval: 8_000,
+    staleTime: Infinity,
   });
+  useEffect(() => {
+    if (artifactsQuery.data) useSyncStore.getState().seedArtifacts(run.id, artifactsQuery.data);
+  }, [run.id, artifactsQuery.data]);
+  const artifacts = useArtifacts(run.id);
   const confirmation = byKind(artifacts, "submission_confirmation");
   const review = byKind(artifacts, "review_screenshot");
   return (
@@ -139,14 +146,18 @@ function durationLabel(run: Run): string | null {
   return minutes > 0 ? `${minutes}m ${rest}s` : `${rest}s`;
 }
 
-function byKind(artifacts: Artifact[] | undefined, kind: string): Artifact | undefined {
+function byKind(artifacts: ReturnType<typeof useArtifacts>, kind: string): Artifact | undefined {
   return artifacts?.find((artifact) => artifact.kind === kind);
 }
 
-function RunStats({ runId }: { runId: string }) {
+function RunStats({ runId, active }: { runId: string; active: boolean }) {
+  // Ledger rows persist server-side per call; a slow poll while the run is
+  // active keeps totals fresh without hammering the backend. The calls
+  // drawer tightens this to 4s while open (shared query key).
   const { data } = useQuery({
     queryKey: ["calls", runId],
     queryFn: () => api.calls(runId),
+    refetchInterval: active ? 15_000 : false,
   });
   const totals = data?.totals;
   const calls = data?.calls ?? [];
