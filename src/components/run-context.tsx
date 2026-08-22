@@ -1,4 +1,4 @@
-import { Ban, BriefcaseBusiness, Check, CheckCircle2, Copy, ExternalLink, PanelRight, ReceiptText, Sparkles, Timer, XCircle } from "lucide-react";
+import { Ban, BriefcaseBusiness, Check, CheckCircle2, Copy, ExternalLink, PanelRight, ReceiptText, Sparkles, Timer, TriangleAlert, XCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api } from "../api";
@@ -6,16 +6,18 @@ import { useArtifacts, useSyncStore } from "../sync-store";
 import type { Artifact, Run } from "../types";
 import { hostnameOf } from "../lib/format";
 import { getRunStatusMeta } from "../lib/run-status";
+import { type SubmissionEvidence, type SubmissionVerdict, submissionVerdict } from "../lib/submission-evidence";
 import { CallsDrawer } from "./calls-drawer";
 
-export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCancel(): void; onOpenSubagents(): void }) {
+export function RunContext({ run, evidence, onCancel, onOpenSubagents }: { run: Run; evidence: SubmissionEvidence; onCancel(): void; onOpenSubagents(): void }) {
   const meta = getRunStatusMeta(run);
+  const verdict = submissionVerdict(run, evidence);
   const submitted = meta.state === "submitted";
   const failed = meta.state === "failed";
   const [callsOpen, setCallsOpen] = useState(false);
   return (
     <aside className="flex min-h-0 flex-1 flex-col overflow-y-auto border-r border-border bg-sidebar">
-      {submitted && <SubmissionSuccess run={run} />}
+      {submitted && <SubmissionSuccess run={run} verdict={verdict} evidence={evidence} />}
       {failed && (
         <div className="mx-3 mt-3 rounded-xl border border-destructive/30 bg-destructive/10 p-3.5">
           <div className="flex items-center gap-2">
@@ -40,6 +42,8 @@ export function RunContext({ run, onCancel, onOpenSubagents }: { run: Run; onCan
           </div>
         </div>
       </div>
+
+      {verdict === "errored" && !failed && <SubmissionAnomalies evidence={evidence} />}
 
       <SectionLabel>Objective</SectionLabel>
       <p className="px-4 pb-4 text-[13px] leading-relaxed text-foreground/90">
@@ -116,7 +120,28 @@ function CopyJobUrl({ url }: { url: string }) {
   );
 }
 
-function SubmissionSuccess({ run }: { run: Run }) {
+/** Live strip for submit failures that stand without a verified claim:
+ * mid-run retries (agent still working) and terminal runs whose outcome
+ * never claimed victory. The banner never hides these from the user. */
+function SubmissionAnomalies({ evidence }: { evidence: SubmissionEvidence }) {
+  return (
+    <div className="mx-3 mt-3 rounded-xl border border-warning/40 bg-warning/10 p-3.5">
+      <div className="flex items-center gap-2">
+        <TriangleAlert className="text-warning" size={16} />
+        <span className="text-sm font-semibold text-warning">
+          {evidence.failures} submit {evidence.failures === 1 ? "attempt failed" : "attempts failed"}
+        </span>
+      </div>
+      {evidence.lastError && <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-warning/90">Last error: {evidence.lastError}</p>}
+      <a href="#activity" className="mt-2 inline-block text-[11px] font-medium text-warning underline underline-offset-2 hover:text-warning/80">See failures in activity</a>
+    </div>
+  );
+}
+
+function SubmissionSuccess({ run, verdict, evidence }: { run: Run; verdict: SubmissionVerdict; evidence: SubmissionEvidence }) {
+  const confirmed = verdict === "verified";
+  // A failure AFTER the last acknowledged success — the claim is stale.
+  const contradicted = evidence.lastFailureSeq !== null && (evidence.lastSuccessSeq === null || evidence.lastFailureSeq > evidence.lastSuccessSeq);
   // Bootstrap once; live updates arrive via artifact.created events through
   // the sync store.
   const artifactsQuery = useQuery({
@@ -132,14 +157,23 @@ function SubmissionSuccess({ run }: { run: Run }) {
   const confirmation = byKind(artifacts, "submission_confirmation");
   const review = byKind(artifacts, "review_screenshot");
   return (
-    <div className="overflow-hidden rounded-xl border border-success/30 bg-success/10 shadow-sm">
+    <div className={`overflow-hidden rounded-xl border shadow-sm ${confirmed ? "border-success/30 bg-success/10" : "border-warning/40 bg-warning/10"}`} data-verdict={verdict}>
       <div className="flex items-center gap-2 px-3.5 pt-3 pb-2">
-        <CheckCircle2 className="text-success" size={18} />
-        <span className="text-sm font-semibold text-success">Application submitted</span>
-        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-semibold text-success"><Check size={12} aria-hidden="true" />verified</span>
+        {confirmed ? <CheckCircle2 className="text-success" size={18} /> : <TriangleAlert className="text-warning" size={18} />}
+        <span className={`text-sm font-semibold ${confirmed ? "text-success" : "text-warning"}`}>Application submitted</span>
+        {confirmed ? (
+          <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-semibold text-success"><Check size={12} aria-hidden="true" />verified</span>
+        ) : (
+          <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-warning/20 px-2 py-0.5 text-[10px] font-semibold text-warning">unconfirmed</span>
+        )}
       </div>
+      {!confirmed && (
+        <p className="px-3.5 pb-2 text-[12px] leading-relaxed text-warning/90">
+          The agent reports success, but no executor confirmation event backs it{contradicted ? " and a submit attempt errored afterwards" : ""}. Treat as unverified until core confirms.
+        </p>
+      )}
       {durationLabel(run) && (
-        <p className="flex items-center gap-1.5 px-3.5 pb-2 font-mono text-[12.5px] leading-5 tabular-nums text-success">
+        <p className={`flex items-center gap-1.5 px-3.5 pb-2 font-mono text-[12.5px] leading-5 tabular-nums ${confirmed ? "text-success" : "text-warning"}`}>
           <Timer size={12} /> took {durationLabel(run)}
         </p>
       )}
@@ -148,7 +182,7 @@ function SubmissionSuccess({ run }: { run: Run }) {
           href={`/api/v1/artifacts/${confirmation.artifact_id}`}
           target="_blank"
           rel="noreferrer"
-          className="block border-y border-success/20 bg-card p-2"
+          className={`block border-y bg-card p-2 ${confirmed ? "border-success/20" : "border-warning/20"}`}
         >
           <img
             src={`/api/v1/artifacts/${confirmation.artifact_id}`}
@@ -157,12 +191,9 @@ function SubmissionSuccess({ run }: { run: Run }) {
           />
         </a>
       )}
-      {run.summary && (
-        <p className="px-3.5 pt-2 pb-3 text-[13px] leading-relaxed text-success/80">{run.summary}</p>
-      )}
       {review && (
-        <details className="border-t border-success/20 px-3.5 py-2">
-          <summary className="cursor-pointer text-[11px] font-medium text-success">Pre-submit review screenshot</summary>
+        <details className={`border-t px-3.5 py-2 ${confirmed ? "border-success/20" : "border-warning/20"}`}>
+          <summary className={`cursor-pointer text-[11px] font-medium ${confirmed ? "text-success" : "text-warning"}`}>Pre-submit review screenshot</summary>
           <a href={`/api/v1/artifacts/${review.artifact_id}`} target="_blank" rel="noreferrer" className="mt-2 block">
             <img
               src={`/api/v1/artifacts/${review.artifact_id}`}

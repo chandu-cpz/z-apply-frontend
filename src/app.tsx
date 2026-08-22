@@ -2,12 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Outlet, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import { Group, Panel, Separator, useDefaultLayout, usePanelRef } from "react-resizable-panels";
 import { Archive, Bot, BriefcaseBusiness, Command, Gauge, History, Monitor, Moon, PanelLeftClose, PanelRightClose, Plus, Settings, Sun } from "lucide-react";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { api } from "./api";
 import { hostnameOf, runAttentionLabel } from "./lib/format";
 import { getRunStatusMeta } from "./lib/run-status";
+import { emptySubmissionEvidence, reduceSubmissionEvidence } from "./lib/submission-evidence";
 import { runSchema } from "./schemas";
 import { useRun, useRuns, useSyncStore } from "./sync-store";
 import { AgentConversation } from "./components/agent-conversation";
@@ -312,6 +313,12 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
     staleTime: Infinity,
     refetchOnWindowFocus: false,
   });
+  // Mechanical submission evidence: the terminal banner renders verdicts
+  // from this struct, never from narration. See lib/submission-evidence.ts.
+  const submissionEvidence = useMemo(
+    () => (events.data ? reduceSubmissionEvidence(events.data) : emptySubmissionEvidence),
+    [events.data],
+  );
   // Run state arrives via the sync store; the live view is fetched data
   // (VNC target) refetched when browser topology events invalidate it.
   const refresh = () => { void query.invalidateQueries({ queryKey: ["live"] }); };
@@ -355,7 +362,7 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
 
   const browser = <BrowserPanel run={run} live={live.data} busy={action.isPending} returning={returningControl} onFocus={() => action.mutate(() => api.focus(run.id))} onControl={takeControl} onReturn={() => { setReturningControl(true); action.mutate(() => api.returnControl(run.id), { onSuccess: () => setReturningControl(false), onError: () => setReturningControl(false) }); }} onClose={() => action.mutate(() => api.closeBrowser(run.id))}/>;
   const sendContext = (content: string) => action.mutate(() => api.sendContext(run.id, content), { onSuccess: () => toast.success("Steering context delivered to the active agent") });
-  const context = <RunContext run={run} onCancel={() => action.mutate(() => api.cancel(run.id))} onOpenSubagents={() => setSubagentsOpen(true)}/>;
+  const context = <RunContext run={run} evidence={submissionEvidence} onCancel={() => action.mutate(() => api.cancel(run.id))} onOpenSubagents={() => setSubagentsOpen(true)}/>;
   const conversation = <AgentConversation run={run} events={events.data ?? []} busy={action.isPending} onSendContext={sendContext} onStop={() => action.mutate(() => api.cancel(run.id), { onSuccess: () => toast.success("Run stopped") })} onAnswer={(requestId, answer) => action.mutate(() => api.answer(run.id, requestId, answer), { onSuccess: () => { refresh(); toast.success("Answer delivered to the agent"); } })} onDecide={(requestId, decision) => action.mutate(() => api.decide(run.id, requestId, decision), { onSuccess: () => { refresh(); toast.success(decision === "approve" ? "Submission approved" : "Submission rejected"); } })}/>;
   const subagents = subagentsOpen ? <AgentsDrawer runId={run.id} events={events.data ?? []} onClose={() => setSubagentsOpen(false)} /> : null;
 

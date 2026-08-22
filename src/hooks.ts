@@ -21,7 +21,7 @@ export const STREAM_EVENT_TYPES = [
   "tool.started", "tool.progress", "tool.completed", "tool.failed",
   "browser.page_opened", "browser.page_focused", "browser.page_closed", "browser.snapshot_refreshed", "browser.control_taken", "browser.control_returned", "browser.closed",
   "human.requested", "human.resolved", "human.cancelled",
-  "submission.review_ready", "submission.review_not_ready", "submission.approval_requested", "submission.approved", "submission.rejected",
+  "submission.review_ready", "submission.review_not_ready", "submission.approval_requested", "submission.approved", "submission.rejected", "submission.completed", "submission.failed",
   "artifact.created", "authentication.evidence", "graph.event", "recovery.started", "recovery.completed", "recovery.exhausted", "context.received", "reasoning.updated",
 ] as const;
 
