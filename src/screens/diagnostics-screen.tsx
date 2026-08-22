@@ -18,7 +18,7 @@ export function DiagnosticsScreen() {
       description="Live backend and Core integration health. Values refresh every five seconds."
     >
       {diagnostics.isError ? (
-        <p className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+        <p className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-[13px] leading-relaxed text-destructive">
           Diagnostics unavailable: {diagnostics.error.message}
         </p>
       ) : (
@@ -26,26 +26,34 @@ export function DiagnosticsScreen() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <DataCard label="Core version" value={diagnostics.data?.version || "—"} />
             <div className="rounded-xl border border-border bg-card p-4 sm:col-span-2 lg:col-span-2">
-              <p className="text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground">Capacity</p>
+              <p className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted-foreground/80">Capacity</p>
               <div className="mt-3 flex items-center gap-3">
-                <span className="whitespace-nowrap text-sm font-medium tabular-nums text-foreground">
+                <span className="whitespace-nowrap font-mono text-[12.5px] font-medium tabular-nums text-foreground">
                   {activeRuns ?? "—"} / {maxRuns ?? "—"} active
                 </span>
                 <div className="h-2 flex-1 overflow-hidden rounded-full border border-border bg-muted">
                   <div
-                    className="h-full rounded-full bg-primary transition-all"
+                    className={cn(
+                      "h-full rounded-full transition-all",
+                      capacityPct >= 80 ? "bg-warning" : "bg-primary",
+                    )}
                     style={{ width: `${capacityPct}%` }}
                   />
                 </div>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">max concurrent applications</p>
+              {diagnostics.dataUpdatedAt > 0 && (
+                <p className="mt-1 font-mono text-[10.5px] tabular-nums text-muted-foreground">
+                  updated {new Date(diagnostics.dataUpdatedAt).toLocaleTimeString()}
+                </p>
+              )}
             </div>
             <DataCard label="Database" value={diagnostics.data?.database || "—"} />
           </div>
 
-          <section className="mt-4 rounded-xl border border-border bg-card p-4">
+          <section className="mt-6 rounded-xl border border-border bg-card p-4">
             <h2 className="text-sm font-semibold text-foreground">Services</h2>
-            <dl className="mt-1 divide-y divide-border">
+            <dl className="mt-3 divide-y divide-border">
               <ServiceRow
                 name="Browser workspace"
                 dot={diagnostics.data?.live_view ? "bg-success" : "bg-destructive"}
@@ -87,12 +95,12 @@ export function DiagnosticsScreen() {
 
 function ServiceRow({ name, dot, value }: { name: string; dot: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-2.5">
+    <div className="flex items-center justify-between gap-3 px-1 py-3">
       <dt className="flex min-w-0 items-center gap-2.5 text-sm text-foreground">
         <span className={cn("size-2 shrink-0 rounded-full", dot)} aria-hidden />
         {name}
       </dt>
-      <dd className="shrink-0 text-sm text-muted-foreground">{value}</dd>
+      <dd className="shrink-0 font-mono text-[12.5px] tabular-nums text-muted-foreground">{value}</dd>
     </div>
   );
 }

@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, CircleOff } from "lucide-react";
+import { CheckCircle2, CircleOff, Inbox } from "lucide-react";
 import { api } from "../api";
 import { Badge } from "../components/ui/badge";
+import { Skeleton } from "../components/ui/skeleton";
 import { DataCard, PageShell } from "../components/page-shell";
 
 export function SettingsScreen() {
@@ -31,31 +32,33 @@ export function SettingsScreen() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-semibold text-foreground">LLM Providers & Models</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="mt-0.5 text-[13px] leading-relaxed text-muted-foreground">
               Providers registered with Core. Set their corresponding environment variable to unlock them.
             </p>
           </div>
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {(providers.data ?? []).map((provider) => (
+          {providers.isLoading
+            ? Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-36 rounded-xl" />)
+            : (providers.data ?? []).map((provider) => (
             <div
               key={provider.name}
               className="flex flex-col justify-between rounded-xl border border-border bg-muted/40 p-3.5 transition"
             >
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-xs text-foreground capitalize">
+                  <span className="text-[13px] font-semibold capitalize text-foreground">
                     {provider.name}
                   </span>
                   <div className="flex items-center gap-1">
                     {provider.is_default && (
-                      <Badge className="bg-primary/10 text-primary">active default</Badge>
+                      <Badge className="bg-secondary text-secondary-foreground">active default</Badge>
                     )}
                     {provider.configured ? (
                       <Badge className="bg-success/10 text-success">configured</Badge>
                     ) : (
-                      <Badge variant="secondary">missing key</Badge>
+                      <Badge className="bg-warning/10 text-warning">missing key</Badge>
                     )}
                   </div>
                 </div>
@@ -67,11 +70,11 @@ export function SettingsScreen() {
 
               <div className="mt-3 border-t border-border pt-2 font-mono text-[12.5px] tabular-nums text-muted-foreground">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Default:</span>
+                  <span className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted-foreground/80">Default</span>
                   <span className="truncate">{provider.default_model}</span>
                 </div>
                 <div className="mt-1 flex justify-between">
-                  <span className="text-muted-foreground">Env Key:</span>
+                  <span className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted-foreground/80">Env key</span>
                   <span className="text-foreground">{provider.env_key}</span>
                 </div>
               </div>
@@ -83,7 +86,7 @@ export function SettingsScreen() {
       <section className="mt-6 grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-5">
           <h2 className="text-sm font-semibold">Candidate profile</h2>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">
             {profile.data?.summary || "Profile status unavailable."}
           </p>
         </div>
@@ -103,7 +106,7 @@ export function SettingsScreen() {
                             href={url}
                             target="_blank"
                             rel="noreferrer"
-                            className="shrink-0 text-xs font-medium text-primary hover:underline"
+                            className="inline-flex shrink-0 items-center rounded-md px-1 py-0.5 text-xs font-medium text-primary hover:underline"
                           >
                             Download
                           </a>
@@ -115,14 +118,24 @@ export function SettingsScreen() {
                 })}
               </ul>
             ) : (
-              <p className="mt-3 text-sm text-muted-foreground">No documents were exposed by the backend.</p>
+              <div className="mt-3 flex flex-col items-center gap-2 rounded-lg border border-dashed border-border px-4 py-8 text-center">
+                <Inbox className="size-8 text-muted-foreground opacity-40" aria-hidden />
+                <p className="text-[13px] leading-relaxed text-muted-foreground">
+                  No documents were exposed by the backend.
+                </p>
+              </div>
             )
           ) : documents.data ? (
-            <pre className="mt-3 overflow-auto rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
+            <pre className="mt-3 overflow-auto rounded-lg bg-muted/40 p-3 font-mono text-[12.5px] tabular-nums text-muted-foreground">
               {JSON.stringify(documents.data, null, 2)}
             </pre>
           ) : (
-            <p className="mt-3 text-sm text-muted-foreground">No documents were exposed by the backend.</p>
+            <div className="mt-3 flex flex-col items-center gap-2 rounded-lg border border-dashed border-border px-4 py-8 text-center">
+              <Inbox className="size-8 text-muted-foreground opacity-40" aria-hidden />
+              <p className="text-[13px] leading-relaxed text-muted-foreground">
+                No documents were exposed by the backend.
+              </p>
+            </div>
           )}
         </div>
       </section>
@@ -154,13 +167,14 @@ function Capability({ label, enabled }: { label: string; enabled?: boolean }) {
     <DataCard
       label={label}
       value={
-        <Badge
-          className={`h-auto gap-2 px-2 py-1 text-base ${
-            enabled ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground"
+        <span
+          className={`flex items-center gap-2 text-sm font-semibold ${
+            enabled ? "text-success" : "text-muted-foreground"
           }`}
         >
-          {enabled ? <CheckCircle2 size={18} /> : <CircleOff size={18} />} {enabled ? "Enabled" : "Unavailable"}
-        </Badge>
+          {enabled ? <CheckCircle2 size={15} className="shrink-0" /> : <CircleOff size={15} className="shrink-0" />}
+          {enabled ? "Enabled" : "Unavailable"}
+        </span>
       }
     />
   );

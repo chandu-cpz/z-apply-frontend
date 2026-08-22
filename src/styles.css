@@ -241,9 +241,33 @@
   animation: z-blink 1.1s step-end infinite;
 }
 
+/* Live-status text: a soft light sweep across the words instead of a
+   "Streaming" caption — motion carries the state, words carry the data. */
+@keyframes z-shimmer-text {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@utility shimmer-text {
+  background-image: linear-gradient(90deg, var(--muted-foreground) 35%, var(--foreground) 50%, var(--muted-foreground) 65%);
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: z-shimmer-text 2.2s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-z-blink,
-  .z-shimmer-line {
+  .z-shimmer-line,
+  .shimmer-text,
+  .animate-pulse {
     animation: none !important;
+  }
+
+  /* Frozen shimmer would leave invisible text — fall back to solid color. */
+  .shimmer-text {
+    background: none;
+    color: var(--muted-foreground);
   }
 }

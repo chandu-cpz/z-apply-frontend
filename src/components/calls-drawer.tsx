@@ -1,4 +1,4 @@
-import { LoaderCircle, X } from "lucide-react";
+import { ArrowRight, LoaderCircle, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
 import { fmtDur, fmtNum, humanAgent, humanModel } from "../lib/format";
@@ -44,7 +44,9 @@ export function CallsDrawer({ runId, onClose }: { runId: string; onClose(): void
                 className="rounded-full border border-border bg-muted/40 px-2.5 py-1"
                 title={`${fmtNum(totals.input_tokens)} gross in · ${fmtNum(totals.cache_read_tokens)} cached`}
               >
-                {fmtNum(totals.new_input_tokens)}→{fmtNum(totals.output_tokens)}
+                {fmtNum(totals.new_input_tokens)}
+                <ArrowRight size={12} aria-hidden="true" className="inline align-[-2px]" />
+                {fmtNum(totals.output_tokens)}
               </span>
               <span className="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-primary">
                 {usd(totals.cost_usd)}

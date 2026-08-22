@@ -70,7 +70,7 @@ function AppIdentity({ run }: { run: Run }) {
   const subtitle = run.role || (run.company ? hostnameOf(run.job_url) : "");
   return (
     <>
-      <p className="truncate font-mono text-[12.5px] font-medium tabular-nums text-foreground" title={run.job_url}>
+      <p className="truncate text-[12.5px] font-medium text-foreground" title={run.job_url}>
         {title}
       </p>
       {subtitle && (
@@ -255,7 +255,7 @@ export function HistoryScreen({ runs, onOpen }: { runs: Run[]; onOpen(run: Run):
           <ArrowUpDown size={14} />
           {sort === "newest" ? "Newest" : "Oldest"}
         </Button>
-        <p className="ml-auto text-[11px] uppercase tracking-[0.05em] text-muted-foreground">
+        <p className="ml-auto text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted-foreground/80">
           {filtered.length} of {runs.length} applications
         </p>
       </div>
@@ -268,7 +268,7 @@ export function HistoryScreen({ runs, onOpen }: { runs: Run[]; onOpen(run: Run):
       </div>
       <div className="hidden overflow-hidden rounded-xl border border-border bg-card md:block">
         <table className="w-full table-fixed text-left text-[13px]">
-          <thead className="bg-muted/40 text-[11px] uppercase tracking-[0.05em] text-muted-foreground">
+          <thead className="bg-muted/40 text-[10.5px] uppercase tracking-[0.06em] text-muted-foreground/80">
             <tr>
               <th className="w-[32%] px-4 py-3 font-medium">Application</th>
               <th className="w-[16%] px-4 py-3 font-medium">Status</th>
@@ -297,7 +297,7 @@ export function HistoryScreen({ runs, onOpen }: { runs: Run[]; onOpen(run: Run):
                   <td className="px-4 py-2">
                     <StatusChip run={run} />
                   </td>
-                  <td className="px-4 py-2 capitalize text-muted-foreground">{outcomeLabel(run)}</td>
+                  <td className="px-4 py-2 font-mono text-[12.5px] capitalize tabular-nums text-muted-foreground">{outcomeLabel(run)}</td>
                   <td className="px-4 py-2">
                     <StartedAt iso={run.started_at || run.created_at} />
                   </td>

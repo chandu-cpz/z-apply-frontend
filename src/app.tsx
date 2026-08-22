@@ -113,7 +113,7 @@ export function AppShell() {
 export function NotFound() {
   const navigate = useNavigate();
   return (
-    <main className="grid min-h-[calc(100dvh_-_3.75rem)] place-items-center p-8 text-center">
+    <main className="grid min-h-[calc(100dvh_-_3.5rem)] place-items-center p-8 text-center">
       <div>
         <p className="text-sm text-muted-foreground">This page does not exist.</p>
         <button className="mt-3 rounded-lg border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground shadow-sm hover:border-primary/40 hover:text-primary" onClick={() => navigate({ to: "/new" })}>
@@ -198,7 +198,7 @@ function Header({ streamStatus }: { streamStatus: string }) {
         {active && <ActiveRunChip run={active} />}
         <AttentionBell />
         <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground" title="Live event stream">
-          <span className={`size-1.5 rounded-full ${streamStatus === "connected" ? "bg-success" : "bg-warning"}`} />
+          <span className={`size-1.5 rounded-full ${streamStatus === "connected" ? "bg-success" : streamStatus === "connecting" || streamStatus === "reconnecting" ? "bg-warning" : "bg-destructive"}`} />
           <span className="hidden sm:inline">{streamStatus}</span>
         </span>
         <button className="grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted" onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")} title="Toggle color theme">
@@ -359,9 +359,9 @@ function Cockpit({ run, runs, onNew, onSelect }: CockpitProps) {
   const conversation = <AgentConversation run={run} events={events.data ?? []} busy={action.isPending} onSendContext={sendContext} onStop={() => action.mutate(() => api.cancel(run.id), { onSuccess: () => toast.success("Run stopped") })} onAnswer={(requestId, answer) => action.mutate(() => api.answer(run.id, requestId, answer), { onSuccess: () => { refresh(); toast.success("Answer delivered to the agent"); } })} onDecide={(requestId, decision) => action.mutate(() => api.decide(run.id, requestId, decision), { onSuccess: () => { refresh(); toast.success(decision === "approve" ? "Submission approved" : "Submission rejected"); } })}/>;
   const subagents = subagentsOpen ? <AgentsDrawer runId={run.id} events={events.data ?? []} onClose={() => setSubagentsOpen(false)} /> : null;
 
-  if (!desktop) return <main className="grid h-[calc(100dvh_-_3.75rem)] min-h-0 grid-rows-[minmax(0,1fr)_3.5rem] overflow-hidden bg-background"><div className="min-h-0 overflow-hidden">{mobilePanel === "activity" && conversation}{mobilePanel === "browser" && <aside className="relative flex h-full min-h-0 flex-col overflow-hidden p-2">{browser}</aside>}{mobilePanel === "run" && <div className="h-full overflow-hidden">{context}</div>}</div><nav className="grid grid-cols-3 border-t border-border bg-card p-1.5" aria-label="Run workspace"><MobileTab active={mobilePanel === "activity"} label="Activity" icon={<Bot size={16}/>} onClick={() => setMobilePanel("activity")}/><MobileTab active={mobilePanel === "browser"} label="Browser" icon={<Monitor size={16}/>} onClick={() => setMobilePanel("browser")}/><MobileTab active={mobilePanel === "run"} label="Run" icon={<BriefcaseBusiness size={16}/>} onClick={() => setMobilePanel("run")}/></nav>{subagents}</main>;
+  if (!desktop) return <main className="grid h-[calc(100dvh_-_3.5rem)] min-h-0 grid-rows-[minmax(0,1fr)_3.5rem] overflow-hidden bg-background"><div className="min-h-0 overflow-hidden">{mobilePanel === "activity" && conversation}{mobilePanel === "browser" && <aside className="relative flex h-full min-h-0 flex-col overflow-hidden p-2">{browser}</aside>}{mobilePanel === "run" && <div className="h-full overflow-hidden">{context}</div>}</div><nav className="grid grid-cols-3 border-t border-border bg-card p-1.5" aria-label="Run workspace"><MobileTab active={mobilePanel === "activity"} label="Activity" icon={<Bot size={16}/>} onClick={() => setMobilePanel("activity")}/><MobileTab active={mobilePanel === "browser"} label="Browser" icon={<Monitor size={16}/>} onClick={() => setMobilePanel("browser")}/><MobileTab active={mobilePanel === "run"} label="Run" icon={<BriefcaseBusiness size={16}/>} onClick={() => setMobilePanel("run")}/></nav>{subagents}</main>;
 
-  return <main className="h-[calc(100dvh_-_3.75rem)] min-h-0"><Group orientation="horizontal" className="h-full overflow-hidden" defaultLayout={layout.defaultLayout} onLayoutChanged={layout.onLayoutChanged}>
+  return <main className="h-[calc(100dvh_-_3.5rem)] min-h-0"><Group orientation="horizontal" className="h-full overflow-hidden" defaultLayout={layout.defaultLayout} onLayoutChanged={layout.onLayoutChanged}>
     <Panel id="context" panelRef={leftPanel} defaultSize={18} minSize={15} collapsible collapsedSize={0}><div className="flex h-full min-w-0 flex-col"><RunRail runs={runs} selected={run.id} onNew={onNew} onSelect={openRun} onCollapse={() => leftPanel.current?.collapse()}/>{context}</div></Panel>
     <ResizeHandle/>
     <Panel id="activity" defaultSize={34} minSize={25}>{conversation}</Panel>
@@ -386,4 +386,4 @@ function MobileTab({ active, attention = false, label, icon, onClick }: { active
 
 function ResizeHandle() { return <Separator className="group relative w-2 cursor-col-resize bg-muted after:absolute after:inset-x-[3px] after:top-[40%] after:bottom-[40%] after:rounded after:bg-muted-foreground/50 hover:after:bg-primary/60"/>; }
 function PanelToggle({ label, icon, onClick }: { label: string; icon: React.ReactNode; onClick(): void }) { return <button className="flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-2 text-[11px] text-muted-foreground shadow-lg hover:text-foreground" onClick={onClick}>{icon}{label}</button>; }
-function CenteredMessage({ children }: React.PropsWithChildren) { return <main className="grid min-h-[calc(100dvh_-_3.75rem)] place-items-center p-8 text-sm text-muted-foreground">{children}</main>; }
+function CenteredMessage({ children }: React.PropsWithChildren) { return <main className="grid min-h-[calc(100dvh_-_3.5rem)] place-items-center p-8 text-sm text-muted-foreground">{children}</main>; }

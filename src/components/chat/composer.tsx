@@ -81,43 +81,46 @@ export function Composer({
           }}
           className="max-h-[172px] min-h-[44px] resize-none border-0 bg-transparent px-5 py-3.5 text-[15px] leading-relaxed shadow-none placeholder:text-muted-foreground focus-visible:ring-0"
         />
-        <div className="flex items-center justify-between gap-3 px-4 pb-3">
-          <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
-            {onSwitchModel && (
-              <ModelCascadingPicker
-                selectedProvider={selectedProvider}
-                selectedModel={selectedModel}
-                onSelect={onSwitchModel}
-                variant="compact"
-                direction="up"
-                disabled={disabled}
-              />
-            )}
-            {onSetReasoning && (
-              <ReasoningPicker
-                selectedReasoning={selectedReasoning}
-                selectedEffort={selectedReasoningEffort}
-                onSelect={onSetReasoning}
-                direction="up"
-                disabled={disabled}
-              />
-            )}
-            {streaming ? (
-              <>
-                <span className="size-1.5 shrink-0 animate-pulse rounded-full bg-primary" />
-                <span className="truncate">{status || "Streaming"} · Esc to stop</span>
-              </>
-            ) : (
-              <span className="hidden truncate sm:inline">Shift+Enter for a new line</span>
-            )}
-          </div>
+        <div className="flex items-center gap-1 px-3 pb-3">
+          {onSwitchModel && (
+            <ModelCascadingPicker
+              selectedProvider={selectedProvider}
+              selectedModel={selectedModel}
+              onSelect={onSwitchModel}
+              variant="compact"
+              direction="up"
+              disabled={disabled}
+            />
+          )}
+          {onSetReasoning && (
+            <ReasoningPicker
+              selectedReasoning={selectedReasoning}
+              selectedEffort={selectedReasoningEffort}
+              onSelect={onSetReasoning}
+              direction="up"
+              disabled={disabled}
+            />
+          )}
+          <div className="min-w-0 flex-1" />
+          {streaming ? (
+            <span className="hidden min-w-0 items-center gap-2 text-[11px] text-muted-foreground sm:flex">
+              <span className="size-1.5 shrink-0 animate-pulse rounded-full bg-primary" />
+              <span className="shimmer-text truncate font-mono tabular-nums">{status || "thinking"}</span>
+              <span className="hidden shrink-0 items-center gap-1 lg:flex">
+                <kbd className="rounded border border-border bg-muted px-1 font-mono text-[10px] leading-4">Esc</kbd>
+                <span className="whitespace-nowrap">to stop</span>
+              </span>
+            </span>
+          ) : (
+            <span className="hidden shrink-0 text-[11px] text-muted-foreground md:inline">Shift+Enter for a new line</span>
+          )}
           <Button
             type="button"
             size="icon"
             onClick={submit}
             disabled={disabled || !content.trim()}
             title="Send"
-            className="rounded-full"
+            className="ml-1 shrink-0 rounded-full"
           >
             <Send size={14} />
           </Button>

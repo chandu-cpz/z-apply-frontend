@@ -18,8 +18,8 @@ export function PageShell({ title, description, action, children }: PropsWithChi
 export function DataCard({ label, value, detail }: { label: string; value: ReactNode; detail?: string }) {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
-      <p className="text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground">{label}</p>
-      <div className="mt-2 text-xl font-semibold tabular-nums text-foreground">{value}</div>
+      <p className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted-foreground/80">{label}</p>
+      <div className="mt-2 text-xl font-semibold tabular-nums text-foreground font-mono">{value}</div>
       {detail && <p className="mt-2 text-xs text-muted-foreground">{detail}</p>}
     </div>
   );

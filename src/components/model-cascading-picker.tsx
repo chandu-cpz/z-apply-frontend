@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { ChevronDown } from "lucide-react";
 import { api } from "../api";
 import type { ProviderCatalogItem } from "../types";
 
@@ -112,15 +113,11 @@ export function ModelCascadingPicker({
           type="button"
           disabled={disabled}
           onClick={() => setIsOpen((prev) => !prev)}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1 text-[11px] font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground focus:outline-none"
+          className="inline-flex h-7 max-w-[190px] shrink-0 items-center gap-1 rounded-full px-2 text-[11.5px] font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           title={`Active model: ${activeProviderName} / ${activeModelName}`}
         >
-          <span className="uppercase tracking-wider text-[10px] text-muted-foreground">
-            {providerLabel}
-          </span>
-          <span className="text-muted-foreground/50">·</span>
-          <span className="max-w-[130px] truncate font-mono text-[12.5px] leading-5 tabular-nums text-foreground">{modelShortLabel || "model"}</span>
-          <span className="text-[9px] text-muted-foreground">{isOpen ? "▴" : "▾"}</span>
+          <span className="max-w-[130px] truncate font-mono text-[11.5px] leading-5 tabular-nums text-foreground">{modelShortLabel || "model"}</span>
+          <ChevronDown size={12} className={`shrink-0 text-muted-foreground/60 transition-transform ${isOpen ? "rotate-180" : ""}`} />
         </button>
       ) : (
         <button
@@ -150,7 +147,7 @@ export function ModelCascadingPicker({
         >
           {/* Left Column: Providers List */}
           <div className="w-56 shrink-0 border-r border-border pr-2">
-            <div className="px-2.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground">
+            <div className="px-2.5 py-1.5 text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted-foreground/80">
               Providers
             </div>
             <div className="mt-1 space-y-1">
@@ -201,7 +198,7 @@ export function ModelCascadingPicker({
             {currentHoveredProvider ? (
               <div className="flex h-full flex-col">
                 <div className="flex items-center justify-between border-b border-border pb-1.5">
-                  <span className="text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground">
+                  <span className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted-foreground/80">
                     {currentHoveredProvider.name} Models
                   </span>
                   <span

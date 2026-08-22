@@ -193,9 +193,26 @@ export function MessageList({ runId, events, run, onAnswer, onDecide }: { runId:
     useFlushSync: false,
   });
 
-  const onScroll = () => {
-    setJumpVisible(!virtualizer.isAtEnd());
+  // Jump visibility comes from the scroller's real geometry — the virtualizer's
+  // isAtEnd() measures item offsets, not the header block + spacer that share
+  // this scroller, so it misreports and leaves the button stuck on screen.
+  const updateJumpVisible = () => {
+    const el = scrollRef.current;
+    if (!el || rows.length === 0) {
+      setJumpVisible(false);
+      return;
+    }
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setJumpVisible(distanceFromBottom > FOLLOW_THRESHOLD_PX);
   };
+
+  const onScroll = updateJumpVisible;
+
+  // Content growing under a scrolled-up reader doesn't fire a scroll event:
+  // streaming extends the live row (totalSize) and ActivityStrip pills shift
+  // listTop without changing rows.length — recheck on all three.
+  const totalSize = virtualizer.getTotalSize();
+  useEffect(updateJumpVisible, [rows.length, listTop, totalSize]);
 
   // Opening a run lands on its latest message (the old follow effect did this
   // on mount because followDown started true); afterwards anchorTo +
@@ -228,7 +245,11 @@ export function MessageList({ runId, events, run, onAnswer, onDecide }: { runId:
               data-index={virtualRow.index}
               ref={virtualizer.measureElement}
               className="absolute left-0 top-0 w-full px-5"
-              style={{ transform: `translateY(${virtualRow.start}px)` }}
+              // virtualRow.start is in scroller coordinates (includes
+              // scrollMargin); this container already sits below the header
+              // block in flow, so subtract scrollMargin or every row is
+              // double-offset by the header height (the "dead gap" bug).
+              style={{ transform: `translateY(${virtualRow.start - listTop}px)` }}
             >
               <RowRenderer row={rows[virtualRow.index]} onAnswer={onAnswer} onDecide={onDecide} />
             </div>

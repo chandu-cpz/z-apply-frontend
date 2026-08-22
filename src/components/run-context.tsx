@@ -136,7 +136,7 @@ function SubmissionSuccess({ run }: { run: Run }) {
       <div className="flex items-center gap-2 px-3.5 pt-3 pb-2">
         <CheckCircle2 className="text-success" size={18} />
         <span className="text-sm font-semibold text-success">Application submitted</span>
-        <span className="ml-auto rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-semibold text-success">✓ verified</span>
+        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-semibold text-success"><Check size={12} aria-hidden="true" />verified</span>
       </div>
       {durationLabel(run) && (
         <p className="flex items-center gap-1.5 px-3.5 pb-2 font-mono text-[12.5px] leading-5 tabular-nums text-success">

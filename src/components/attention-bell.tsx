@@ -27,7 +27,7 @@ export function AttentionBell() {
         )}
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-2">
-        <p className="px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground">Needs your attention</p>
+        <p className="px-2.5 py-1.5 text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted-foreground/80">Needs your attention</p>
         {waiting.length === 0 ? (
           <p className="px-2 py-6 text-center text-xs text-muted-foreground">Nothing needs you right now.</p>
         ) : (

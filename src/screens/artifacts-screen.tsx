@@ -6,6 +6,8 @@ import {
   FileArchive,
   FileJson,
   FileText,
+  Files,
+  Filter,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
@@ -13,6 +15,8 @@ import { artifactUrl, isImageArtifact } from "../lib/artifacts";
 import { hostnameOf } from "../lib/format";
 import { getRunStatusMeta } from "../lib/run-status";
 import { PageShell } from "../components/page-shell";
+import { Button } from "../components/ui/button";
+import { Skeleton } from "../components/ui/skeleton";
 import { useArtifacts, useSyncStore } from "../sync-store";
 import { cn } from "../lib/utils";
 import type { Artifact, Run } from "../types";
@@ -70,7 +74,9 @@ export function ArtifactsScreen({ runs }: { runs: Run[] }) {
       title="Run artifacts"
       description="Screenshots, documents, and submission evidence exposed by Core for the selected application."
       action={
-        <DropdownMenu>
+        <div className="flex flex-col items-end gap-1">
+          <span className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted-foreground/80">Run</span>
+          <DropdownMenu>
           <DropdownMenuTrigger
             className="inline-flex max-w-xs items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             title="Switch run"
@@ -115,6 +121,7 @@ export function ArtifactsScreen({ runs }: { runs: Run[] }) {
             })}
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       }
     >
       {kinds.length > 0 && (
@@ -147,23 +154,33 @@ export function ArtifactsScreen({ runs }: { runs: Run[] }) {
         ))}
       </div>
       {artifacts.length > 0 && visible.length === 0 && (
-        <p className="rounded-xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-          No artifacts match the selected kind filters.
-        </p>
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border p-10 text-center">
+          <Filter className="size-8 text-muted-foreground opacity-40" aria-hidden />
+          <p className="text-[13px] leading-relaxed text-muted-foreground">
+            No artifacts match the selected kind filters.
+          </p>
+        </div>
       )}
       {artifactsQuery.isLoading && (
-        <p className="text-sm text-muted-foreground">Loading run artifacts…</p>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-hidden>
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Skeleton key={index} className="aspect-[4/3] rounded-xl" />
+          ))}
+        </div>
       )}
       {artifactsQuery.isError && (
-        <p className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+        <p className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-[13px] leading-relaxed text-destructive">
           Artifacts are unavailable: {artifactsQuery.error.message}
         </p>
       )}
       {!artifactsQuery.isLoading && artifacts.length === 0 && (
         <div className="flex min-h-[calc(100dvh-18rem)] items-center justify-center">
-          <p className="w-full rounded-xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-            No artifacts have been published for this run.
-          </p>
+          <div className="flex w-full max-w-sm flex-col items-center gap-3 rounded-xl border border-dashed border-border p-10 text-center">
+            <Files className="size-8 text-muted-foreground opacity-40" aria-hidden />
+            <p className="text-[13px] leading-relaxed text-muted-foreground">
+              No artifacts have been published for this run yet.
+            </p>
+          </div>
         </div>
       )}
       <Dialog
@@ -193,15 +210,16 @@ export function ArtifactsScreen({ runs }: { runs: Run[] }) {
                 <p className="truncate text-sm font-medium text-foreground">
                   {lightbox.filename}
                 </p>
-                <a
-                  className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary hover:opacity-90"
-                  download
-                  href={artifactUrl(lightbox.artifact_id)}
-                  title="Download artifact"
-                >
-                  <Download size={13} />
-                  Download
-                </a>
+                <Button asChild size="sm" className="mt-1">
+                  <a
+                    download
+                    href={artifactUrl(lightbox.artifact_id)}
+                    title="Download artifact"
+                  >
+                    <Download size={13} />
+                    Download
+                  </a>
+                </Button>
               </div>
             )}
           </DialogContent>
@@ -258,8 +276,8 @@ function ArtifactCard({
         </a>
       </div>
       <div className="min-w-0 p-3">
-        <h2 className="truncate text-sm font-medium">{artifact.filename}</h2>
-        <p className="mt-1 truncate font-mono text-[10px] uppercase text-muted-foreground">
+        <h2 className="truncate text-[13px] font-medium">{artifact.filename}</h2>
+        <p className="mt-1 truncate font-mono text-[12.5px] tabular-nums text-muted-foreground">
           {artifact.kind} · {formatBytes(artifact.size_bytes)} ·{" "}
           {formatDate(artifact.created_at)}
         </p>

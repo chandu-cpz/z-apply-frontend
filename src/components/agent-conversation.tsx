@@ -159,7 +159,7 @@ export function AgentConversation({ run, events, busy = false, onSendContext, on
     collectPendingRequests(buildTimeline(events), found);
     return found.sort((left, right) => left.seq - right.seq);
   }, [events, waitingOnHuman]);
-  const status = streaming && run.current_model ? `Streaming · ${run.current_model.split("/").pop()}` : streaming ? "Streaming" : undefined;
+  const status = streaming ? run.current_model?.split("/").pop() : undefined;
 
   const switchModelMutation = useMutation({
     mutationFn: ({ provider, model }: { provider: string; model: string }) => api.switchModel(run.id, provider, model),

@@ -1,4 +1,4 @@
-import { Bot, Home, LoaderCircle, X } from "lucide-react";
+import { ArrowLeft, Bot, Home, LoaderCircle, X } from "lucide-react";
 import { useEffect, useMemo, memo, useState } from "react";
 import { useLiveStore } from "../live-store";
 import type { ActivityEvent } from "../types";
@@ -36,13 +36,46 @@ function runSubtitle(row: AgentRow): string {
   return parts.join(" · ");
 }
 
+/** Visible subtitle: same content as runSubtitle() but with lucide glyphs
+ * instead of unicode arrows/multiplication signs. runSubtitle() stays as the
+ * plain-string source for title tooltips. */
+function RunSubtitle({ row }: { row: AgentRow }) {
+  const run = row.agent.runs[row.runIndex];
+  const parts: React.ReactNode[] = [];
+  if (run.spawned > 1)
+    parts.push(
+      <span key="spawned" className="inline-flex items-center gap-0.5">
+        <X size={11} aria-hidden="true" />
+        {run.spawned} spawned
+      </span>,
+    );
+  if (run.parallel) parts.push(<span key="parallel">parallel</span>);
+  if (row.agent.parent)
+    parts.push(
+      <span key="parent" className="inline-flex items-center gap-0.5">
+        <ArrowLeft size={11} aria-hidden="true" />
+        {humanAgent(row.agent.parent)}
+      </span>,
+    );
+  return (
+    <>
+      {parts.map((part, index) => (
+        <span key={index}>
+          {index > 0 && " · "}
+          {part}
+        </span>
+      ))}
+    </>
+  );
+}
+
 function AgentRowButton({ active, onClick, children, title }: { active?: boolean; onClick: () => void; children: React.ReactNode; title?: string }) {
   return (
     <button
       type="button"
       title={title}
       onClick={onClick}
-      className={`mb-1 flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left ${active ? "bg-accent text-accent-foreground ring-1 ring-primary/30" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+      className={`mb-1 flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left ${active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
     >
       {children}
     </button>
@@ -50,7 +83,7 @@ function AgentRowButton({ active, onClick, children, title }: { active?: boolean
 }
 
 function sectionLabel(label: string): React.ReactNode {
-  return <p className="px-2 pt-1 pb-1.5 text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground">{label}</p>;
+  return <p className="px-2 pt-1 pb-1.5 text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted-foreground/80">{label}</p>;
 }
 
 const LiveAgentChat = memo(function LiveAgentChat({ agent }: { agent: LiveAgent }) {
@@ -63,9 +96,6 @@ const LiveAgentChat = memo(function LiveAgentChat({ agent }: { agent: LiveAgent 
             <p className="truncate text-sm font-semibold tracking-tight text-foreground">{humanAgent(agent.agent)}</p>
             <p className="text-xs text-muted-foreground">live · streaming assistant</p>
           </div>
-          <span className="ml-auto flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-            <LoaderCircle size={11} className="animate-spin" /> streaming
-          </span>
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
@@ -154,7 +184,6 @@ export function AgentsDrawer({ runId, events, onClose }: { runId: string; events
                   <LoaderCircle size={12} className="shrink-0 animate-spin text-primary" />
                   <span className="min-w-0">
                     <span className="block truncate text-[13px] font-semibold text-foreground">{humanAgent(agent.agent)}</span>
-                    <span className="block text-[10px] font-medium uppercase tracking-[0.05em] text-primary">live</span>
                   </span>
                 </AgentRowButton>
               );
@@ -168,7 +197,7 @@ export function AgentsDrawer({ runId, events, onClose }: { runId: string; events
                   <span className="grid size-5 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"><Home size={11} /></span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13px] font-semibold text-foreground">{runLabel(row)}</span>
-                    <span className="block truncate text-[11px] text-muted-foreground">{runSubtitle(row)}</span>
+                    <span className="block truncate text-[11px] text-muted-foreground"><RunSubtitle row={row} /></span>
                   </span>
                   <StatusDot status={status} />
                 </AgentRowButton>
@@ -183,7 +212,7 @@ export function AgentsDrawer({ runId, events, onClose }: { runId: string; events
                   <StatusDot status={status} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13px] font-semibold text-foreground">{runLabel(row)}</span>
-                    <span className="block truncate text-[11px] text-muted-foreground">{runSubtitle(row)}</span>
+                    <span className="block truncate text-[11px] text-muted-foreground"><RunSubtitle row={row} /></span>
                   </span>
                   <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[12.5px] leading-5 tabular-nums text-muted-foreground">{row.agent.runs[row.runIndex].items.length} items</span>
                 </AgentRowButton>

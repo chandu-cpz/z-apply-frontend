@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Check, ChevronDown, Sparkles } from "lucide-react";
 
 export type ReasoningMode = "auto" | "off" | "on";
 export type ReasoningEffort = "low" | "medium" | "high" | "max";
@@ -28,10 +29,22 @@ const OPTIONS: ReasoningSelection[] = [
 const OPTION_LABEL: Record<string, string> = {
   auto: "Auto",
   off: "Off",
+  on: "On",
   "on:low": "On · low",
   "on:medium": "On · medium",
   "on:high": "On · high",
   "on:max": "On · max",
+};
+
+/** One-word chip labels — the full "On · high" form lives in the menu only. */
+const CHIP_LABEL: Record<string, string> = {
+  auto: "Auto",
+  off: "Off",
+  on: "On",
+  "on:low": "Low",
+  "on:medium": "Medium",
+  "on:high": "High",
+  "on:max": "Max",
 };
 
 function optionKey(option: ReasoningSelection): string {
@@ -69,29 +82,21 @@ export function ReasoningPicker({
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen((prev) => !prev)}
-        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1 text-[11px] font-medium text-foreground transition hover:bg-muted focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex h-7 shrink-0 items-center gap-1 rounded-full px-2 text-[11.5px] font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
         title="Thinking / reasoning"
       >
-        <span className="text-muted-foreground">Thinking</span>
-        <span
-          className={`text-[10px] uppercase tracking-wide ${
-            selectedReasoning === "on"
-              ? "font-medium text-primary"
-              : "text-muted-foreground"
-          }`}
-        >
-          {OPTION_LABEL[activeKey]}
-        </span>
-        <span className="text-[9px] text-muted-foreground">{isOpen ? "▴" : "▾"}</span>
+        <Sparkles size={12} className={selectedReasoning === "on" ? "shrink-0 text-primary" : "shrink-0"} />
+        <span className="whitespace-nowrap">{CHIP_LABEL[activeKey]}</span>
+        <ChevronDown size={12} className={`shrink-0 text-muted-foreground/60 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </button>
 
       {isOpen && (
         <div
           className={`absolute z-50 ${
             direction === "up" ? "bottom-full mb-2" : "top-full mt-2"
-          } left-0 w-44 rounded-xl border border-border bg-popover p-1.5 shadow-2xl`}
+          } left-0 w-44 origin-bottom-left rounded-xl border border-border bg-popover p-1.5 shadow-xl`}
         >
-          <div className="px-2 py-1 text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground">
+          <div className="px-2 py-1 text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted-foreground/80">
             Thinking
           </div>
           <div className="space-y-0.5">
@@ -113,7 +118,7 @@ export function ReasoningPicker({
                   }`}
                 >
                   {OPTION_LABEL[key]}
-                  {isCurrent && <span className="text-[10px] text-primary">•</span>}
+                  {isCurrent && <Check size={12} className="text-primary" />}
                 </button>
               );
             })}
